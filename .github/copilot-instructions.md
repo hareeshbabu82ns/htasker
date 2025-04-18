@@ -56,7 +56,7 @@ htracker/
 ### Type Safety
 
 - Use `strict: true` in tsconfig.json
-- Avoid `any` type - use `unknown` when type is uncertain
+- Avoid `any` type instead use `unknown` when type is uncertain
 - Leverage TypeScript utility types: `Partial<T>`, `Pick<T>`, `Omit<T>`, `Record<K,T>`
 - Create type guards for runtime type checking:
   ```typescript
@@ -64,6 +64,16 @@ htracker/
     return Object.values(TrackerType).includes(value as TrackerType);
   }
   ```
+- always create functions with typesafe parameters
+
+```typescript
+interface QuickActionCardParams {
+  title: string;
+  description: string;
+}
+function QuickActionCard({ title, description }: QuickActionCardParams) {}
+```
+
 - Use discriminated unions for state management:
   ```typescript
   type TrackerState =

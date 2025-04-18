@@ -1,36 +1,45 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { TrackerType } from '@/types';
+import { getTrackers } from '@/app/actions/trackers';
 
-export default function DashboardPage() {
-  // Normally we would fetch this data from the database
-  // This is just placeholder data for now
-  const recentTrackers = [
-    {
-      id: '1',
-      name: 'Work Hours',
-      type: TrackerType.TIMER,
-      description: 'Track time spent working on projects',
-      lastUsed: new Date( '2025-04-17T14:30:00' ),
-      entries: 12
-    },
-    {
-      id: '2',
-      name: 'Water Intake',
-      type: TrackerType.COUNTER,
-      description: 'Track daily water consumption',
-      lastUsed: new Date( '2025-04-18T09:15:00' ),
-      entries: 8
-    },
-    {
-      id: '3',
-      name: 'Grocery Expenses',
-      type: TrackerType.AMOUNT,
-      description: 'Track grocery spending',
-      lastUsed: new Date( '2025-04-16T18:45:00' ),
-      entries: 5
-    },
-  ];
+export default async function DashboardPage() {
+  // Fetch trackers from the database
+  const response = await getTrackers();
+  let allTrackers = response.success ? ( response.data as any[] ) : [];
+
+  // Process trackers to include only the active ones and not archived
+  const activeTrackers = allTrackers
+    .filter( tracker => tracker.status !== 'ARCHIVED' )
+    .map( tracker => ( {
+      id: tracker.id,
+      name: tracker.name,
+      type: tracker.type,
+      description: tracker.description,
+      lastUsed: new Date( tracker.updatedAt ),
+      entries: tracker._count?.entries || 0
+    } ) );
+
+  // Get the most recently updated trackers (based on updatedAt)
+  const recentTrackers = [ ...activeTrackers ]
+    .sort( ( a, b ) => b.lastUsed.getTime() - a.lastUsed.getTime() )
+    .slice( 0, 3 );
+
+  // Get the most frequently used trackers (based on entry count)
+  const frequentTrackers = [ ...activeTrackers ]
+    .sort( ( a, b ) => b.entries - a.entries )
+    .slice( 0, 3 );
+
+  // Combine and deduplicate (prioritizing recently used)
+  const combinedTrackers = [ ...recentTrackers ];
+  for ( const tracker of frequentTrackers ) {
+    if ( !combinedTrackers.some( t => t.id === tracker.id ) ) {
+      combinedTrackers.push( tracker );
+    }
+  }
+
+  // Limit to at most 4 trackers for display
+  const displayTrackers = combinedTrackers.slice( 0, 4 );
 
   return (
     <div className="space-y-6">
@@ -91,8 +100,8 @@ export default function DashboardPage() {
         </div>
 
         <div className="space-y-4">
-          {recentTrackers.length > 0 ? (
-            recentTrackers.map( ( tracker ) => (
+          {displayTrackers.length > 0 ? (
+            displayTrackers.map( ( tracker ) => (
               <TrackerCard key={tracker.id} tracker={tracker} />
             ) )
           ) : (

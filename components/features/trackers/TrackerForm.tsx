@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useTracker } from "@/hooks/useTracker";
 import { TrackerFormValues, TrackerType } from "@/types";
+import { createTracker, updateTracker } from "@/app/actions/trackers";
 
 // Schema for form validation
 const formSchema = z.object( {
@@ -36,7 +37,6 @@ interface TrackerFormProps {
 
 export default function TrackerForm( { initialData, trackerId, onSuccess }: TrackerFormProps ) {
   const router = useRouter();
-  const { addTracker } = useTracker();
   const [ isSubmitting, setIsSubmitting ] = useState( false );
   const [ error, setError ] = useState<string | null>( null );
   const [ tagInput, setTagInput ] = useState( "" );
@@ -71,49 +71,45 @@ export default function TrackerForm( { initialData, trackerId, onSuccess }: Trac
     setError( null );
 
     try {
-      // Create FormData object for server action
-      const formData = new FormData();
-      formData.append( "name", data.name );
+      let result;
 
-      if ( data.description ) {
-        formData.append( "description", data.description );
+      if ( isEditing && trackerId ) {
+        // Update existing tracker
+        result = await updateTracker( trackerId, {
+          name: data.name,
+          description: data.description,
+          tags: data.tags,
+          color: data.color,
+          icon: data.icon,
+          // Not updating type as it can't be changed after creation
+        } );
+      } else {
+        // Create new tracker
+        result = await createTracker( {
+          name: data.name,
+          description: data.description,
+          type: data.type,
+          tags: data.tags,
+          color: data.color,
+          icon: data.icon,
+        } );
       }
-
-      formData.append( "type", data.type );
-
-      // Add each tag as a separate form field
-      data.tags.forEach( tag => {
-        formData.append( "tags", tag );
-      } );
-
-      if ( data.color ) {
-        formData.append( "color", data.color );
-      }
-
-      if ( data.icon ) {
-        formData.append( "icon", data.icon );
-      }
-
-      // Use addTracker from useTracker hook
-      const result = await addTracker( formData );
 
       if ( result.success ) {
-        // Reset form if successful
-        reset();
-
         // Call onSuccess callback if provided
         if ( onSuccess ) {
           onSuccess();
         } else {
-          // Navigate to the tracker details page or dashboard
-          router.push( `/dashboard/trackers/${result.data.id}` );
+          // Navigate to the tracker details page and refresh to show updated data
+          router.push( `/dashboard/trackers/${isEditing ? trackerId : result.data.id}` );
           router.refresh();
         }
       } else {
-        setError( result.errors ? result.errors.message || "Please check form errors" : "Failed to create tracker" );
+        setError( result.error || "Failed to save tracker" );
       }
     } catch ( e ) {
       setError( "An unexpected error occurred" );
+      console.error( e );
     } finally {
       setIsSubmitting( false );
     }
@@ -162,8 +158,8 @@ export default function TrackerForm( { initialData, trackerId, onSuccess }: Trac
           type="text"
           id="name"
           className={`w-full px-3 py-2 border rounded-md shadow-sm focus:ring-primary/50 focus:border-primary ${errors.name
-              ? "border-red-500 focus:border-red-500 focus:ring-red-500/50"
-              : "border-gray-300 dark:border-gray-700"
+            ? "border-red-500 focus:border-red-500 focus:ring-red-500/50"
+            : "border-gray-300 dark:border-gray-700"
             } bg-background`}
           placeholder="Enter tracker name"
           {...register( "name" )}
@@ -197,7 +193,9 @@ export default function TrackerForm( { initialData, trackerId, onSuccess }: Trac
         </label>
         <select
           id="type"
-          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-primary/50 focus:border-primary dark:border-gray-700 bg-background"
+          className={`w-full px-3 py-2 border rounded-md shadow-sm focus:ring-primary/50 focus:border-primary 
+            ${isEditing ? "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400" : "bg-background"} 
+            ${errors.type ? "border-red-500" : "border-gray-300 dark:border-gray-700"}`}
           {...register( "type" )}
           disabled={isEditing} // Disable type change if editing
         >
@@ -209,6 +207,11 @@ export default function TrackerForm( { initialData, trackerId, onSuccess }: Trac
         </select>
         {errors.type && (
           <p className="mt-1 text-sm text-red-600">{errors.type.message}</p>
+        )}
+        {isEditing && (
+          <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+            Tracker type cannot be changed after creation
+          </p>
         )}
       </div>
 
@@ -288,7 +291,7 @@ export default function TrackerForm( { initialData, trackerId, onSuccess }: Trac
         <Button
           type="button"
           variant="ghost"
-          onClick={() => router.push( "/dashboard/trackers" )}
+          onClick={() => router.push( isEditing ? `/dashboard/trackers/${trackerId}` : "/dashboard/trackers" )}
           disabled={isSubmitting}
         >
           Cancel

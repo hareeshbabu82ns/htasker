@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import TrackerView from "@/components/features/trackers/TrackerView";
 import { getTracker } from "@/app/actions/trackers";
 import { Tracker } from "@/types";
+import DeleteTrackerButton from "@/components/features/trackers/DeleteTrackerButton";
 
 export default async function TrackerDetailPage( {
   params,
@@ -52,9 +53,7 @@ export default async function TrackerDetailPage( {
           <Link href={`/dashboard/trackers/${params.id}/edit`} passHref>
             <Button variant="outline">Edit</Button>
           </Link>
-          <Button variant="ghost">
-            More Options
-          </Button>
+          <DeleteTrackerButton trackerId={params.id} />
         </div>
       </div>
 
@@ -64,10 +63,10 @@ export default async function TrackerDetailPage( {
           <div className="flex items-center gap-2">
             <div
               className={`w-2 h-2 rounded-full ${tracker.status === "ACTIVE"
-                  ? "bg-green-500"
-                  : tracker.status === "INACTIVE"
-                    ? "bg-yellow-500"
-                    : "bg-gray-500"
+                ? "bg-green-500"
+                : tracker.status === "INACTIVE"
+                  ? "bg-yellow-500"
+                  : "bg-gray-500"
                 }`}
             ></div>
             <span className="text-sm font-medium">
