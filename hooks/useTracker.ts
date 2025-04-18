@@ -3,10 +3,15 @@
 import {
   createTracker,
   getTrackers,
-  updateTrackerStatus,
+  updateTracker,
   deleteTracker,
+  CreateTrackerInput,
 } from "@/app/actions/trackers";
-import { createEntry, getEntries } from "@/app/actions/entries";
+import { 
+  createEntry, 
+  getEntriesByTracker,
+  CreateEntryInput 
+} from "@/app/actions/entries";
 import { useState } from "react";
 import { Tracker, TrackerEntry, TrackerStatus, TrackerType } from "@/types";
 
@@ -20,11 +25,21 @@ export function useTracker() {
     setError(null);
 
     try {
-      const response = await createTracker(formData);
+      // Convert FormData to the expected CreateTrackerInput structure
+      const trackerData: CreateTrackerInput = {
+        name: formData.get("name") as string,
+        description: (formData.get("description") as string) || undefined,
+        type: formData.get("type") as TrackerType,
+        tags: formData.getAll("tags").map((tag) => tag as string),
+        color: (formData.get("color") as string) || undefined,
+        icon: (formData.get("icon") as string) || undefined,
+      };
+
+      const response = await createTracker(trackerData);
 
       if (!response.success) {
-        setError(response.message || "Failed to create tracker");
-        return { success: false, errors: response.errors };
+        setError(response.error || "Failed to create tracker");
+        return { success: false, errors: { message: response.error } };
       }
 
       return { success: true, data: response.data };
@@ -56,24 +71,26 @@ export function useTracker() {
     setError(null);
 
     try {
-      const response = await getTrackers({
-        status,
-        type,
-        search,
-        sort,
-        limit,
-        page,
-      });
+      const response = await getTrackers();
 
       if (!response.success) {
-        setError(response.message || "Failed to fetch trackers");
+        setError(response.error || "Failed to fetch trackers");
         return { success: false };
       }
 
+      // Adapt to the actual response structure
+      const trackers = response.data as any[];
+
       return {
         success: true,
-        data: response.data.trackers,
-        pagination: response.data.pagination,
+        data: {
+          trackers,
+          pagination: {
+            total: trackers.length,
+            page: page || 1,
+            limit: limit || 10,
+          },
+        },
       };
     } catch (err) {
       setError("An unexpected error occurred");
@@ -89,10 +106,10 @@ export function useTracker() {
     setError(null);
 
     try {
-      const response = await updateTrackerStatus(trackerId, status);
+      const response = await updateTracker(trackerId, { status });
 
       if (!response.success) {
-        setError(response.message || "Failed to update tracker status");
+        setError(response.error || "Failed to update tracker status");
         return { success: false };
       }
 
@@ -114,7 +131,7 @@ export function useTracker() {
       const response = await deleteTracker(trackerId);
 
       if (!response.success) {
-        setError(response.message || "Failed to delete tracker");
+        setError(response.error || "Failed to delete tracker");
         return { success: false };
       }
 
@@ -133,11 +150,28 @@ export function useTracker() {
     setError(null);
 
     try {
-      const response = await createEntry(formData);
+      // Convert FormData to the expected CreateEntryInput structure
+      const entryData: CreateEntryInput = {
+        trackerId: formData.get("trackerId") as string,
+        date: new Date(),
+        startTime: formData.get("startTime") 
+          ? new Date(formData.get("startTime") as string) 
+          : undefined,
+        endTime: formData.get("endTime") 
+          ? new Date(formData.get("endTime") as string) 
+          : undefined,
+        value: formData.get("value") 
+          ? parseFloat(formData.get("value") as string) 
+          : undefined,
+        note: (formData.get("note") as string) || undefined,
+        tags: formData.getAll("tags").map((tag) => tag as string),
+      };
+
+      const response = await createEntry(entryData);
 
       if (!response.success) {
-        setError(response.message || "Failed to create entry");
-        return { success: false, errors: response.errors };
+        setError(response.error || "Failed to create entry");
+        return { success: false, errors: { message: response.error } };
       }
 
       return { success: true, data: response.data };
@@ -167,23 +201,21 @@ export function useTracker() {
     setError(null);
 
     try {
-      const response = await getEntries({
-        trackerId,
-        startDate,
-        endDate,
-        limit,
-        page,
-      });
+      const response = await getEntriesByTracker(trackerId, limit || 50);
 
       if (!response.success) {
-        setError(response.message || "Failed to fetch entries");
+        setError(response.error || "Failed to fetch entries");
         return { success: false };
       }
 
       return {
         success: true,
-        data: response.data.entries,
-        pagination: response.data.pagination,
+        data: response.data,
+        pagination: {
+          total: response.data.length,
+          page: page || 1,
+          limit: limit || 50,
+        },
       };
     } catch (err) {
       setError("An unexpected error occurred");

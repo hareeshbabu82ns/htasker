@@ -110,7 +110,7 @@ export default function TrackerForm( { initialData, trackerId, onSuccess }: Trac
           router.refresh();
         }
       } else {
-        setError( result.errors ? "Please check form errors" : "Failed to create tracker" );
+        setError( result.errors ? result.errors.message || "Please check form errors" : "Failed to create tracker" );
       }
     } catch ( e ) {
       setError( "An unexpected error occurred" );

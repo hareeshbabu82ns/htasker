@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Tracker, TrackerStatus } from "@/types";
+import { Tracker } from "@/types";
 import { useTracker } from "@/hooks/useTracker";
-import { formatDuration } from "@/lib/utils";
 
 interface TimerTrackerProps {
   tracker: Tracker;
@@ -12,91 +11,81 @@ interface TimerTrackerProps {
 }
 
 export default function TimerTracker( { tracker, onUpdate }: TimerTrackerProps ) {
-  const { addEntry, changeStatus } = useTracker();
-  const [ isRunning, setIsRunning ] = useState( tracker.status === TrackerStatus.ACTIVE );
-  const [ elapsedTime, setElapsedTime ] = useState( 0 );
+  const { addEntry } = useTracker();
+  const [ isRunning, setIsRunning ] = useState( false );
   const [ startTime, setStartTime ] = useState<Date | null>( null );
-  const [ isSubmitting, setIsSubmitting ] = useState( false );
-  const timerIdRef = useRef<NodeJS.Timeout | null>( null );
-  const startTimeRef = useRef<Date | null>( null );
+  const [ elapsedTime, setElapsedTime ] = useState( 0 ); // in milliseconds
+  const [ isLoading, setIsLoading ] = useState( false );
 
-  // Effect to manage timer ticks
+  // Update the timer every second when running
   useEffect( () => {
-    if ( isRunning ) {
-      const now = new Date();
-      startTimeRef.current = startTimeRef.current || now;
+    let interval: NodeJS.Timeout | null = null;
 
-      timerIdRef.current = setInterval( () => {
-        if ( startTimeRef.current ) {
-          setElapsedTime( Math.floor( ( new Date().getTime() - startTimeRef.current.getTime() ) / 1000 ) );
-        }
+    if ( isRunning && startTime ) {
+      interval = setInterval( () => {
+        const now = new Date();
+        const elapsed = now.getTime() - startTime.getTime();
+        setElapsedTime( elapsed );
       }, 1000 );
-    } else if ( timerIdRef.current ) {
-      clearInterval( timerIdRef.current );
-      timerIdRef.current = null;
     }
 
     return () => {
-      if ( timerIdRef.current ) {
-        clearInterval( timerIdRef.current );
-      }
+      if ( interval ) clearInterval( interval );
     };
-  }, [ isRunning ] );
+  }, [ isRunning, startTime ] );
+
+  // Format time as HH:MM:SS
+  const formatTime = ( milliseconds: number ) => {
+    const totalSeconds = Math.floor( milliseconds / 1000 );
+    const hours = Math.floor( totalSeconds / 3600 );
+    const minutes = Math.floor( ( totalSeconds % 3600 ) / 60 );
+    const seconds = totalSeconds % 60;
+
+    const pad = ( num: number ) => num.toString().padStart( 2, '0' );
+
+    return `${pad( hours )}:${pad( minutes )}:${pad( seconds )}`;
+  };
 
   // Handle starting the timer
-  const handleStart = async () => {
-    setIsSubmitting( true );
-
-    try {
-      const now = new Date();
-      setStartTime( now );
-      startTimeRef.current = now;
-
-      // Update tracker status to active
-      await changeStatus( tracker.id, TrackerStatus.ACTIVE );
-
-      setIsRunning( true );
-      if ( onUpdate ) onUpdate();
-    } catch ( error ) {
-      console.error( "Failed to start timer:", error );
-    } finally {
-      setIsSubmitting( false );
-    }
+  const handleStart = () => {
+    const now = new Date();
+    setStartTime( now );
+    setIsRunning( true );
   };
 
   // Handle stopping the timer
   const handleStop = async () => {
-    setIsSubmitting( true );
+    setIsLoading( true );
+    setIsRunning( false );
 
     try {
-      const endTime = new Date();
+      if ( !startTime ) return;
 
-      if ( startTime ) {
-        // Create an entry for the completed timer session
+      const now = new Date();
+      const duration = now.getTime() - startTime.getTime();
+
+      // Only create entry if the timer ran for at least 1 second
+      if ( duration >= 1000 ) {
         const formData = new FormData();
         formData.append( "trackerId", tracker.id );
         formData.append( "startTime", startTime.toISOString() );
-        formData.append( "endTime", endTime.toISOString() );
-        formData.append( "value", elapsedTime.toString() );
+        formData.append( "endTime", now.toISOString() );
+        formData.append( "date", now.toISOString() );
 
         // Submit the entry
         await addEntry( formData );
+
+        // Call the onUpdate callback if provided
+        if ( onUpdate ) onUpdate();
       }
 
-      // Update tracker status to inactive
-      await changeStatus( tracker.id, TrackerStatus.INACTIVE );
-
       // Reset timer state
-      setIsRunning( false );
       setElapsedTime( 0 );
       setStartTime( null );
-      startTimeRef.current = null;
-
-      if ( onUpdate ) onUpdate();
     } catch ( error ) {
-      console.error( "Failed to stop timer:", error );
+      console.error( "Failed to save timer session:", error );
     } finally {
-      setIsSubmitting( false );
+      setIsLoading( false );
     }
   };
 
@@ -104,8 +93,11 @@ export default function TimerTracker( { tracker, onUpdate }: TimerTrackerProps )
     <div className="bg-background border border-border p-6 rounded-lg shadow-sm">
       {/* Timer display */}
       <div className="text-center mb-6">
-        <div className="text-4xl font-mono font-semibold mb-2">
-          {formatDuration( elapsedTime )}
+        <div
+          className="text-5xl font-semibold mb-2"
+          style={{ color: tracker.color || "inherit" }}
+        >
+          {formatTime( elapsedTime )}
         </div>
         <div className="text-sm text-foreground/70">
           {isRunning ? "Timer running" : "Timer stopped"}
@@ -113,29 +105,30 @@ export default function TimerTracker( { tracker, onUpdate }: TimerTrackerProps )
       </div>
 
       {/* Timer controls */}
-      <div className="flex justify-center space-x-4">
+      <div className="flex justify-center space-x-3">
         {!isRunning ? (
           <Button
             onClick={handleStart}
-            disabled={isSubmitting}
-            className="px-8"
+            disabled={isLoading}
+            className="px-8 py-2"
             style={{ backgroundColor: tracker.color || undefined }}
           >
-            {isSubmitting ? "Starting..." : "Start Timer"}
+            Start Timer
           </Button>
         ) : (
           <Button
             onClick={handleStop}
-            disabled={isSubmitting}
-            variant="secondary"
-            className="px-8"
+            disabled={isLoading}
+            variant="outline"
+            className="px-8 py-2 border-2"
+            style={{ borderColor: tracker.color || undefined }}
           >
-            {isSubmitting ? "Stopping..." : "Stop Timer"}
+            Stop Timer
           </Button>
         )}
       </div>
 
-      {/* Recent sessions placeholder */}
+      {/* History section */}
       <div className="mt-8">
         <h3 className="font-medium text-sm mb-3">Recent Sessions</h3>
         <div className="text-center p-4 border border-dashed border-gray-300 dark:border-gray-700 rounded-md">

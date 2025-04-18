@@ -33,13 +33,16 @@
         "mhutchie.git-graph"
       ]
     }
-  }
+  },
 
   // Use 'forwardPorts' to make a list of ports inside the container available locally.
-  // "forwardPorts": [3000, 27017],
+  "forwardPorts": [3000, 27017]
 
   // Use 'postCreateCommand' to run commands after the container is created.
   // "postCreateCommand": "yarn install",
+
+  // Use 'postStartCommand' to run commands after the container starts.
+  // "postStartCommand": "mongosh --eval \"try { rs.status() } catch (err) { rs.initiate({ _id: 'rs0', members: [{ _id: 0, host: 'localhost:27017' }] }) }\""
 
   // Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
   // "remoteUser": "root"

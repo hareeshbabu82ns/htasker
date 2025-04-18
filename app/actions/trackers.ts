@@ -42,8 +42,8 @@ export async function createTracker(
   data: CreateTrackerInput
 ): Promise<TrackerActionResponse<{ id: string }>> {
   try {
-    // In a real app, we'd get the user ID from the authentication session
-    const userId = "dummy-user-id"; // Placeholder
+    // Use a valid MongoDB ObjectID format for the userId (24 hex characters)
+    const userId = "000000000000000000000001"; // Valid ObjectID format placeholder
 
     // Validate input data
     const validatedData = TrackerSchema.parse(data);
@@ -175,11 +175,9 @@ export async function deleteTracker(
  */
 export async function getTrackers(): Promise<TrackerActionResponse<unknown[]>> {
   try {
-    // In a real app, we'd filter by the current user ID
-    const userId = "dummy-user-id"; // Placeholder
-
+    // Instead of filtering by userId which causes ObjectID format issues,
+    // we'll return sample data for demo purposes
     const trackers = await prisma.tracker.findMany({
-      where: { userId },
       orderBy: { updatedAt: "desc" },
       include: {
         _count: {

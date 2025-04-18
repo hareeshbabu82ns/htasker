@@ -1,4 +1,5 @@
-import { PrismaClient } from "@prisma/client";
+// Import from the generated client location
+import { PrismaClient } from "../../app/generated/prisma";
 
 // PrismaClient is attached to the `global` object in development to prevent
 // exhausting your database connection limit.
