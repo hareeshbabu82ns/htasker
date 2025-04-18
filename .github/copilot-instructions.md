@@ -4,6 +4,12 @@
 
 HTracker is a full-stack responsive web application built on NextJS that allows users to track various metrics including time, counters, amounts, prices, and custom events.
 
+basic next app created using command
+
+```sh
+npx create-next-app@latest . --typescript --tailwind --eslint --app --use-npm
+```
+
 ## Technical Stack
 
 ### Core Technologies
