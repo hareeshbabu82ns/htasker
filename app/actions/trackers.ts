@@ -171,14 +171,23 @@ export async function deleteTracker(
 }
 
 /**
- * Get all trackers with optional filtering
+ * Get all trackers with optional filtering and pagination
  */
 export async function getTrackers(filters?: {
   status?: TrackerStatus;
   type?: TrackerType;
   search?: string;
   sort?: string;
-}): Promise<TrackerActionResponse<unknown[]>> {
+  page?: number;
+  limit?: number;
+}): Promise<
+  TrackerActionResponse<{
+    trackers: unknown[];
+    total: number;
+    totalPages: number;
+    page: number;
+  }>
+> {
   try {
     // Build the where clause based on the provided filters
     const where: any = {};
@@ -219,7 +228,16 @@ export async function getTrackers(filters?: {
       }
     }
 
-    // Query the database with the filters
+    // Setup pagination parameters
+    const page = filters?.page && filters.page > 0 ? filters.page : 1;
+    const limit = filters?.limit && filters.limit > 0 ? filters.limit : 10;
+    const skip = (page - 1) * limit;
+
+    // Count total items for pagination info
+    const total = await prisma.tracker.count({ where });
+    const totalPages = Math.ceil(total / limit);
+
+    // Query the database with the filters and pagination
     const trackers = await prisma.tracker.findMany({
       where,
       orderBy,
@@ -228,9 +246,19 @@ export async function getTrackers(filters?: {
           select: { entries: true },
         },
       },
+      skip,
+      take: limit,
     });
 
-    return { success: true, data: trackers };
+    return {
+      success: true,
+      data: {
+        trackers,
+        total,
+        totalPages,
+        page,
+      },
+    };
   } catch (error) {
     console.error("Error getting trackers:", error);
     return { success: false, error: "Failed to retrieve trackers" };

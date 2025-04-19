@@ -6,7 +6,7 @@ import { getTrackers } from '@/app/actions/trackers';
 export default async function DashboardPage() {
   // Fetch trackers from the database
   const response = await getTrackers();
-  let allTrackers = response.success ? ( response.data as any[] ) : [];
+  const allTrackers = response.success ? ( response.data.trackers as any[] ) : [];
 
   // Process trackers to include only the active ones and not archived
   const activeTrackers = allTrackers

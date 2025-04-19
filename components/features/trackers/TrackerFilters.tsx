@@ -45,6 +45,9 @@ export default function TrackerFilters( {
       // Create a new URLSearchParams object based on current params
       const params = new URLSearchParams( searchParams.toString() );
 
+      // Always remove page parameter when filters change to reset pagination
+      params.delete( "page" );
+
       // Handle search query parameter (set or delete)
       if ( debouncedSearchQuery ) {
         params.set( "q", debouncedSearchQuery );
@@ -149,7 +152,7 @@ export default function TrackerFilters( {
           onClick={handleClearFilters}
           disabled={isPending}
           variant="outline"
-          size="icon"
+          size="sm"
           className="h-10 w-10 flex-shrink-0"
           aria-label="Clear filters"
         >
