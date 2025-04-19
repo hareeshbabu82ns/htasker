@@ -171,14 +171,58 @@ export async function deleteTracker(
 }
 
 /**
- * Get all trackers
+ * Get all trackers with optional filtering
  */
-export async function getTrackers(): Promise<TrackerActionResponse<unknown[]>> {
+export async function getTrackers(filters?: {
+  status?: TrackerStatus;
+  type?: TrackerType;
+  search?: string;
+  sort?: string;
+}): Promise<TrackerActionResponse<unknown[]>> {
   try {
-    // Instead of filtering by userId which causes ObjectID format issues,
-    // we'll return sample data for demo purposes
+    // Build the where clause based on the provided filters
+    const where: any = {};
+
+    // Add status filter if provided
+    if (filters?.status) {
+      where.status = filters.status;
+    }
+
+    // Add type filter if provided
+    if (filters?.type) {
+      where.type = filters.type;
+    }
+
+    // Add search filter if provided
+    if (filters?.search) {
+      where.OR = [
+        { name: { contains: filters.search, mode: "insensitive" } },
+        { description: { contains: filters.search, mode: "insensitive" } },
+        { tags: { has: filters.search } }, // This works if tags is stored as an array
+      ];
+    }
+
+    // Determine the sort order
+    let orderBy: any = { updatedAt: "desc" }; // Default sort
+
+    if (filters?.sort) {
+      switch (filters.sort) {
+        case "name":
+          orderBy = { name: "asc" };
+          break;
+        case "created":
+          orderBy = { createdAt: "desc" };
+          break;
+        case "recent":
+          orderBy = { updatedAt: "desc" };
+          break;
+      }
+    }
+
+    // Query the database with the filters
     const trackers = await prisma.tracker.findMany({
-      orderBy: { updatedAt: "desc" },
+      where,
+      orderBy,
       include: {
         _count: {
           select: { entries: true },

@@ -2,57 +2,31 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { getTrackers } from "@/app/actions/trackers";
 import { TrackerStatus, TrackerType } from "@/types";
+import TrackerFilters from "@/components/features/trackers/TrackerFilters";
 
 export default async function TrackersPage( {
   searchParams,
 }: {
-  searchParams: { [ key: string ]: string | string[] | undefined };
+  searchParams: { [ key: string ]: string | string[] | undefined | Promise<unknown> };
 } ) {
+  const resolvedSearchParams = await searchParams;
+
   // Get filter parameters from URL search params
-  const statusFilter = searchParams.status as TrackerStatus | undefined;
-  const typeFilter = searchParams.type as TrackerType | undefined;
-  const searchQuery = searchParams.q as string | undefined;
-  const sortOrder = searchParams.sort as string | undefined;
+  const statusFilter = resolvedSearchParams.status as TrackerStatus | undefined;
+  const typeFilter = resolvedSearchParams.type as TrackerType | undefined;
+  const searchQuery = resolvedSearchParams.q as string | undefined;
+  const sortOrder = resolvedSearchParams.sort as string | undefined;
 
-  // Fetch trackers (in a real app we would pass these filters to the server)
-  const response = await getTrackers();
-  let trackers = response.success ? ( response.data as any[] ) : [];
+  // Pass filters directly to getTrackers for server-side filtering
+  const response = await getTrackers( {
+    status: statusFilter,
+    type: typeFilter,
+    search: searchQuery,
+    sort: sortOrder,
+  } );
 
-  // Apply client-side filters (for demo purposes)
-  if ( statusFilter ) {
-    trackers = trackers.filter( tracker => tracker.status === statusFilter );
-  }
-
-  if ( typeFilter ) {
-    trackers = trackers.filter( tracker => tracker.type === typeFilter );
-  }
-
-  if ( searchQuery ) {
-    const query = searchQuery.toLowerCase();
-    trackers = trackers.filter( tracker =>
-      tracker.name.toLowerCase().includes( query ) ||
-      ( tracker.description && tracker.description.toLowerCase().includes( query ) ) ||
-      tracker.tags.some( ( tag: string ) => tag.toLowerCase().includes( query ) )
-    );
-  }
-
-  // Apply sort order
-  if ( sortOrder ) {
-    switch ( sortOrder ) {
-      case "name":
-        trackers = trackers.sort( ( a, b ) => a.name.localeCompare( b.name ) );
-        break;
-      case "recent":
-        trackers = trackers.sort( ( a, b ) => new Date( b.updatedAt ).getTime() - new Date( a.updatedAt ).getTime() );
-        break;
-      case "created":
-        trackers = trackers.sort( ( a, b ) => new Date( b.createdAt ).getTime() - new Date( a.createdAt ).getTime() );
-        break;
-    }
-  } else {
-    // Default sort by most recently updated
-    trackers = trackers.sort( ( a, b ) => new Date( b.updatedAt ).getTime() - new Date( a.updatedAt ).getTime() );
-  }
+  // Get the trackers from the response
+  const trackers = response.success ? ( response.data as any[] ) : [];
 
   return (
     <div className="space-y-6">
@@ -64,55 +38,12 @@ export default async function TrackersPage( {
       </div>
 
       {/* Filter and search controls */}
-      <div className="bg-background border border-border p-4 rounded-lg space-y-4">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-grow">
-            <input
-              type="text"
-              placeholder="Search trackers..."
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:ring-primary/50 focus:border-primary bg-background"
-              defaultValue={searchQuery || ""}
-            />
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-            {/* Status filter */}
-            <select
-              className="px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:ring-primary/50 focus:border-primary bg-background"
-              defaultValue={statusFilter || ""}
-            >
-              <option value="">All Status</option>
-              <option value={TrackerStatus.ACTIVE}>Active</option>
-              <option value={TrackerStatus.INACTIVE}>Inactive</option>
-              <option value={TrackerStatus.ARCHIVED}>Archived</option>
-            </select>
-
-            {/* Type filter */}
-            <select
-              className="px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:ring-primary/50 focus:border-primary bg-background"
-              defaultValue={typeFilter || ""}
-            >
-              <option value="">All Types</option>
-              <option value={TrackerType.TIMER}>Timer</option>
-              <option value={TrackerType.COUNTER}>Counter</option>
-              <option value={TrackerType.AMOUNT}>Amount</option>
-              <option value={TrackerType.OCCURRENCE}>Occurrence</option>
-              <option value={TrackerType.CUSTOM}>Custom</option>
-            </select>
-
-            {/* Sort order */}
-            <select
-              className="px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:ring-primary/50 focus:border-primary bg-background"
-              defaultValue={sortOrder || "recent"}
-            >
-              <option value="recent">Recently Used</option>
-              <option value="name">Name (A-Z)</option>
-              <option value="created">Newest First</option>
-            </select>
-          </div>
-
-          <Button type="button">Apply Filters</Button>
-        </div>
-      </div>
+      <TrackerFilters
+        defaultStatus={statusFilter}
+        defaultType={typeFilter}
+        defaultQuery={searchQuery}
+        defaultSort={sortOrder || "recent"}
+      />
 
       {/* Trackers list */}
       <div className="space-y-4">
