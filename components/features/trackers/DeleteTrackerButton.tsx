@@ -76,7 +76,7 @@ export default function DeleteTrackerButton( { trackerId }: DeleteTrackerButtonP
               </Button>
               <Button
                 onClick={handleConfirmDelete}
-                variant="destructive"
+                variant="danger"
                 disabled={isDeleting}
               >
                 {isDeleting ? "Deleting..." : "Delete Forever"}

@@ -1,7 +1,7 @@
 // For format details, see https://aka.ms/devcontainer.json. For config options, see the
 // README at: https://github.com/devcontainers/templates/tree/main/src/javascript-node-mongo
 {
-  "name": "HTasker",
+  "name": "HTracker",
   "dockerComposeFile": "docker-compose.yml",
   "service": "app",
   "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
@@ -30,7 +30,8 @@
         "dbaeumer.vscode-eslint",
         "eamodio.gitlens",
         "mhutchie.git-graph",
-        "mhutchie.git-graph"
+        "mhutchie.git-graph",
+        "bradlc.vscode-tailwindcss"
       ]
     }
   },
