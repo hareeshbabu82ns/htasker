@@ -15,9 +15,33 @@ export default function TimerTracker( { tracker, onUpdate }: TimerTrackerProps )
   const [ isRunning, setIsRunning ] = useState( false );
   const [ startTime, setStartTime ] = useState<Date | null>( null );
   const [ elapsedTime, setElapsedTime ] = useState( 0 ); // in milliseconds
+  const [ elapsedAccumulatedTime, setElapsedAccumulatedTime ] = useState( 0 ); // in milliseconds for all entries
   const [ isLoading, setIsLoading ] = useState( false );
   const [ entries, setEntries ] = useState<TrackerEntry[]>( [] );
   const [ isLoadingEntries, setIsLoadingEntries ] = useState( false );
+
+  // Calculate total duration from entries
+  const calculateTotalDuration = async (): Promise<number> => {
+    try {
+      const response = await fetchEntries( {
+        trackerId: tracker.id,
+        limit: 1000 // Use a large number to get all entries
+      } );
+      if ( response.success ) {
+        const entries = response.data as TrackerEntry[];
+        return entries.reduce( ( total, entry ) => {
+          if ( entry.startTime && entry.endTime ) {
+            return total + calculateDuration( new Date( entry.startTime ), new Date( entry.endTime ) );
+          }
+          return total;
+        }, 0 );
+      }
+      return 0;
+    } catch ( error ) {
+      console.error( "Failed to calculate total duration:", error );
+      return 0;
+    }
+  };
 
   // Fetch entries when the component mounts or when a new entry is added
   useEffect( () => {
@@ -30,7 +54,12 @@ export default function TimerTracker( { tracker, onUpdate }: TimerTrackerProps )
         } );
 
         if ( response.success ) {
-          setEntries( response.data as TrackerEntry[] );
+          const entriesData = response.data as TrackerEntry[];
+          setEntries( entriesData );
+          // Calculate and set the elapsed time from entries
+          const totalDuration = await calculateTotalDuration();
+          setElapsedAccumulatedTime( totalDuration );
+          setElapsedTime( totalDuration );
         }
       } catch ( error ) {
         console.error( "Failed to load timer entries:", error );
@@ -51,14 +80,14 @@ export default function TimerTracker( { tracker, onUpdate }: TimerTrackerProps )
       interval = setInterval( () => {
         const now = new Date();
         const elapsed = now.getTime() - startTime.getTime();
-        setElapsedTime( elapsed );
+        setElapsedTime( elapsedAccumulatedTime + elapsed );
       }, 1000 );
     }
 
     return () => {
       if ( interval ) clearInterval( interval );
     };
-  }, [ isRunning, startTime ] );
+  }, [ isRunning, startTime, elapsedAccumulatedTime ] );
 
   // Format time as HH:MM:SS
   const formatTime = ( milliseconds: number ) => {
@@ -122,7 +151,12 @@ export default function TimerTracker( { tracker, onUpdate }: TimerTrackerProps )
         } );
 
         if ( response.success ) {
-          setEntries( response.data as TrackerEntry[] );
+          const entriesData = response.data as TrackerEntry[];
+          setEntries( entriesData );
+          // Update the total accumulated time after adding a new entry
+          const totalDuration = await calculateTotalDuration();
+          setElapsedAccumulatedTime( totalDuration );
+          setElapsedTime( totalDuration );
         }
 
         // Call the onUpdate callback if provided
@@ -130,7 +164,6 @@ export default function TimerTracker( { tracker, onUpdate }: TimerTrackerProps )
       }
 
       // Reset timer state
-      setElapsedTime( 0 );
       setStartTime( null );
     } catch ( error ) {
       console.error( "Failed to save timer session:", error );
