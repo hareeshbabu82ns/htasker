@@ -77,7 +77,7 @@ export default function TrackerFilters( {
       }
 
       // Update the URL with the new search parameters
-      router.push( `/dashboard/trackers?${params.toString()}` );
+      router.push( `/trackers?${params.toString()}` );
     } );
   };
 
@@ -91,7 +91,7 @@ export default function TrackerFilters( {
 
     // Update the URL to remove all search parameters
     startTransition( () => {
-      router.push( "/dashboard/trackers" );
+      router.push( "/trackers" );
     } );
   };
 

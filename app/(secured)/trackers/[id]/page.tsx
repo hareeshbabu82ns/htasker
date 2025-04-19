@@ -27,7 +27,7 @@ export default async function TrackerDetailPage( {
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
           <Link
-            href="/dashboard/trackers"
+            href="/trackers"
             className="text-sm text-foreground/70 hover:text-foreground flex items-center gap-1"
           >
             <svg
@@ -50,7 +50,7 @@ export default async function TrackerDetailPage( {
         </div>
 
         <div className="flex gap-2">
-          <Link href={`/dashboard/trackers/${params.id}/edit`} passHref>
+          <Link href={`/trackers/${params.id}/edit`} passHref>
             <Button variant="outline">Edit</Button>
           </Link>
           <DeleteTrackerButton trackerId={params.id} />

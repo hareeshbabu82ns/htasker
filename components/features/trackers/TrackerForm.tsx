@@ -101,7 +101,7 @@ export default function TrackerForm( { initialData, trackerId, onSuccess }: Trac
           onSuccess();
         } else {
           // Navigate to the tracker details page and refresh to show updated data
-          router.push( `/dashboard/trackers/${isEditing ? trackerId : result.data.id}` );
+          router.push( `/trackers/${isEditing ? trackerId : result.data.id}` );
           router.refresh();
         }
       } else {
@@ -291,7 +291,7 @@ export default function TrackerForm( { initialData, trackerId, onSuccess }: Trac
         <Button
           type="button"
           variant="ghost"
-          onClick={() => router.push( isEditing ? `/dashboard/trackers/${trackerId}` : "/dashboard/trackers" )}
+          onClick={() => router.push( isEditing ? `/trackers/${trackerId}` : "/trackers" )}
           disabled={isSubmitting}
         >
           Cancel

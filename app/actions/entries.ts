@@ -48,7 +48,7 @@ export async function createEntry(
     });
 
     revalidatePath("/dashboard");
-    revalidatePath(`/dashboard/trackers/${data.trackerId}`);
+    revalidatePath(`/trackers/${data.trackerId}`);
 
     return { success: true, data: { id: entry.id } };
   } catch (error) {
@@ -108,7 +108,7 @@ export async function updateEntry(
 
     // If trackerId is available, refresh that tracker's page
     if (data.trackerId) {
-      revalidatePath(`/dashboard/trackers/${data.trackerId}`);
+      revalidatePath(`/trackers/${data.trackerId}`);
     }
 
     revalidatePath("/dashboard");
@@ -152,7 +152,7 @@ export async function deleteEntry(
       where: { id },
     });
 
-    revalidatePath(`/dashboard/trackers/${entry.trackerId}`);
+    revalidatePath(`/trackers/${entry.trackerId}`);
     revalidatePath("/dashboard");
 
     return { success: true, data: { id } };
@@ -210,7 +210,7 @@ export async function startTimerEntry(
       },
     });
 
-    revalidatePath(`/dashboard/trackers/${trackerId}`);
+    revalidatePath(`/trackers/${trackerId}`);
     revalidatePath("/dashboard");
 
     return { success: true, data: { id: entry.id } };
@@ -266,7 +266,7 @@ export async function stopTimerEntry(
       (endTime.getTime() - currentEntry.startTime.getTime()) / 1000
     );
 
-    revalidatePath(`/dashboard/trackers/${currentEntry.trackerId}`);
+    revalidatePath(`/trackers/${currentEntry.trackerId}`);
     revalidatePath("/dashboard");
 
     return {
@@ -307,7 +307,7 @@ export async function addCounterEntry(
       data: { updatedAt: new Date() },
     });
 
-    revalidatePath(`/dashboard/trackers/${trackerId}`);
+    revalidatePath(`/trackers/${trackerId}`);
     revalidatePath("/dashboard");
 
     return { success: true, data: { id: entry.id } };

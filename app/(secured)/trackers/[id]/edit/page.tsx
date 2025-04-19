@@ -34,7 +34,7 @@ export default async function EditTrackerPage( {
       {/* Header */}
       <div>
         <Link
-          href={`/dashboard/trackers/${params.id}`}
+          href={`/trackers/${params.id}`}
           className="text-sm text-foreground/70 hover:text-foreground flex items-center gap-1"
         >
           <svg

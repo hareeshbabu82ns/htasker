@@ -27,7 +27,7 @@ export default function DeleteTrackerButton( { trackerId }: DeleteTrackerButtonP
 
       if ( response.success ) {
         // Redirect to trackers list page after successful deletion
-        router.push( "/dashboard/trackers" );
+        router.push( "/trackers" );
         router.refresh();
       } else {
         // If there was an error, hide the confirmation dialog and reset state

@@ -50,10 +50,10 @@ export default async function DashboardPage() {
           Track your time, count anything, monitor expenses, or record occurrences - all in one place.
         </p>
         <div className="flex flex-wrap gap-4">
-          <Link href="/dashboard/trackers/new" passHref>
+          <Link href="/trackers/new" passHref>
             <Button>Create New Tracker</Button>
           </Link>
-          <Link href="/dashboard/trackers" passHref>
+          <Link href="/trackers" passHref>
             <Button variant="outline">View All Trackers</Button>
           </Link>
         </div>
@@ -66,25 +66,25 @@ export default async function DashboardPage() {
           <QuickActionCard
             title="Timer"
             description="Track duration of activities"
-            href="/dashboard/timer"
+            href="/timer"
             icon={<TimerIcon />}
           />
           <QuickActionCard
             title="Counter"
             description="Track occurrences and quantities"
-            href="/dashboard/counter"
+            href="/counter"
             icon={<CounterIcon />}
           />
           <QuickActionCard
             title="Amount"
             description="Track monetary values and expenses"
-            href="/dashboard/amount"
+            href="/amount"
             icon={<AmountIcon />}
           />
           <QuickActionCard
             title="Occurrence"
             description="Track date-based events"
-            href="/dashboard/occurrence"
+            href="/occurrence"
             icon={<OccurrenceIcon />}
           />
         </div>
@@ -94,7 +94,7 @@ export default async function DashboardPage() {
       <section className="space-y-4">
         <div className="flex justify-between items-center">
           <h2 className="text-xl font-semibold">Recent Trackers</h2>
-          <Link href="/dashboard/trackers" className="text-primary hover:underline text-sm">
+          <Link href="/trackers" className="text-primary hover:underline text-sm">
             View All
           </Link>
         </div>
@@ -107,7 +107,7 @@ export default async function DashboardPage() {
           ) : (
             <div className="bg-background border border-border rounded-lg p-6 text-center">
               <p className="text-foreground/70">No recent trackers found</p>
-              <Link href="/dashboard/trackers/new" passHref className="mt-2 inline-block">
+              <Link href="/trackers/new" passHref className="mt-2 inline-block">
                 <Button variant="outline" size="sm">Create Your First Tracker</Button>
               </Link>
             </div>
@@ -178,7 +178,7 @@ function TrackerCard( { tracker } ) {
           </div>
         </div>
         <div className="flex space-x-2">
-          <Link href={`/dashboard/trackers/${tracker.id}`} passHref>
+          <Link href={`/trackers/${tracker.id}`} passHref>
             <Button variant="ghost" size="sm">View</Button>
           </Link>
         </div>

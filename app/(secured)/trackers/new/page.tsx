@@ -7,7 +7,7 @@ export default function NewTrackerPage() {
       {/* Header */}
       <div>
         <Link
-          href="/dashboard/trackers"
+          href="/trackers"
           className="text-sm text-foreground/70 hover:text-foreground flex items-center gap-1"
         >
           <svg

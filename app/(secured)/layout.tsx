@@ -5,11 +5,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ThemeToggle } from "@/components/ui/theme/ThemeToggle";
 
-interface DashboardLayoutProps {
+interface AppLayoutProps {
   children: ReactNode;
 }
 
-export default function DashboardLayout( { children }: DashboardLayoutProps ) {
+export default function AppLayout( { children }: AppLayoutProps ) {
   const [ sidebarOpen, setSidebarOpen ] = useState( false );
   const pathname = usePathname();
 
@@ -69,46 +69,46 @@ export default function DashboardLayout( { children }: DashboardLayoutProps ) {
             isActive={isActive( "/dashboard" )}
           />
           <NavItem
-            href="/dashboard/trackers"
+            href="/trackers"
             icon={<TrackersIcon />}
             label="All Trackers"
-            isActive={isActive( "/dashboard/trackers" )}
+            isActive={isActive( "/trackers" )}
           />
           <NavItem
-            href="/dashboard/timer"
+            href="/timer"
             icon={<TimerIcon />}
             label="Timer"
-            isActive={isActive( "/dashboard/timer" )}
+            isActive={isActive( "/timer" )}
           />
           <NavItem
-            href="/dashboard/counter"
+            href="/counter"
             icon={<CounterIcon />}
             label="Counter"
-            isActive={isActive( "/dashboard/counter" )}
+            isActive={isActive( "/counter" )}
           />
           <NavItem
-            href="/dashboard/amount"
+            href="/amount"
             icon={<AmountIcon />}
             label="Amount"
-            isActive={isActive( "/dashboard/amount" )}
+            isActive={isActive( "/amount" )}
           />
           <NavItem
-            href="/dashboard/occurrence"
+            href="/occurrence"
             icon={<OccurrenceIcon />}
             label="Occurrence"
-            isActive={isActive( "/dashboard/occurrence" )}
+            isActive={isActive( "/occurrence" )}
           />
           <NavItem
-            href="/dashboard/stats"
+            href="/stats"
             icon={<StatsIcon />}
             label="Statistics"
-            isActive={isActive( "/dashboard/stats" )}
+            isActive={isActive( "/stats" )}
           />
           <NavItem
-            href="/dashboard/settings"
+            href="/settings"
             icon={<SettingsIcon />}
             label="Settings"
-            isActive={isActive( "/dashboard/settings" )}
+            isActive={isActive( "/settings" )}
           />
         </nav>
       </aside>
@@ -141,7 +141,7 @@ export default function DashboardLayout( { children }: DashboardLayoutProps ) {
 
           {/* Page title - can be dynamic based on route */}
           <h1 className="text-xl font-semibold text-foreground hidden md:block">
-            Dashboard
+
           </h1>
 
           {/* Header actions */}

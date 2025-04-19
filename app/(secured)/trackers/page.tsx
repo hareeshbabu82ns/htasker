@@ -76,14 +76,14 @@ export default async function TrackersPage( {
   const getPaginationUrl = ( pageNumber: number ) => {
     const params = new URLSearchParams( baseParams );
     params.set( "page", pageNumber.toString() );
-    return `/dashboard/trackers?${params.toString()}`;
+    return `/trackers?${params.toString()}`;
   };
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <h1 className="text-2xl font-semibold">All Trackers</h1>
-        <Link href="/dashboard/trackers/new" passHref>
+        <Link href="/trackers/new" passHref>
           <Button>Create New Tracker</Button>
         </Link>
       </div>
@@ -130,7 +130,7 @@ export default async function TrackersPage( {
         ) : (
           <div className="bg-background border border-border rounded-lg p-6 text-center">
             <p className="text-foreground/70">No trackers found</p>
-            <Link href="/dashboard/trackers/new" className="mt-2 inline-block">
+            <Link href="/trackers/new" className="mt-2 inline-block">
               <Button variant="outline" size="sm">
                 Create Your First Tracker
               </Button>
@@ -348,12 +348,12 @@ function TrackerListItem( { tracker }: { tracker: any } ) {
         </div>
 
         <div className="flex items-center justify-end gap-2">
-          <Link href={`/dashboard/trackers/${tracker.id}`} passHref>
+          <Link href={`/trackers/${tracker.id}`} passHref>
             <Button variant="outline" size="sm">
               View
             </Button>
           </Link>
-          <Link href={`/dashboard/trackers/${tracker.id}/edit`} passHref>
+          <Link href={`/trackers/${tracker.id}/edit`} passHref>
             <Button variant="ghost" size="sm">
               Edit
             </Button>

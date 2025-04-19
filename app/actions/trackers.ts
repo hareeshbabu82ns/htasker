@@ -58,7 +58,7 @@ export async function createTracker(
     });
 
     revalidatePath("/dashboard");
-    revalidatePath("/dashboard/trackers");
+    revalidatePath("/trackers");
 
     return { success: true, data: { id: tracker.id } };
   } catch (error) {
@@ -126,8 +126,8 @@ export async function updateTracker(
     });
 
     revalidatePath("/dashboard");
-    revalidatePath("/dashboard/trackers");
-    revalidatePath(`/dashboard/trackers/${id}`);
+    revalidatePath("/trackers");
+    revalidatePath(`/trackers/${id}`);
 
     return { success: true, data: { id: tracker.id } };
   } catch (error) {
@@ -161,7 +161,7 @@ export async function deleteTracker(
     });
 
     revalidatePath("/dashboard");
-    revalidatePath("/dashboard/trackers");
+    revalidatePath("/trackers");
 
     return { success: true, data: { id } };
   } catch (error) {
