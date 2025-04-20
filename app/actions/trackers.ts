@@ -4,6 +4,7 @@ import { z } from "zod";
 import prisma from "@/lib/db/prisma";
 import { TrackerStatus, TrackerType } from "@/types";
 import { revalidatePath } from "next/cache";
+import { Tracker } from "../generated/prisma";
 
 // Define a response type for better type safety
 export type TrackerActionResponse<T = unknown> =
@@ -170,6 +171,16 @@ export async function deleteTracker(
   }
 }
 
+export type TrackerWithEntriesCount = Tracker & {
+  entriesCount: number;
+};
+export type TrackerPagingResponse = {
+  trackers: TrackerWithEntriesCount[];
+  total: number;
+  totalPages: number;
+  page: number;
+};
+
 /**
  * Get all trackers with optional filtering and pagination
  */
@@ -180,14 +191,7 @@ export async function getTrackers(filters?: {
   sort?: string;
   page?: number;
   limit?: number;
-}): Promise<
-  TrackerActionResponse<{
-    trackers: unknown[];
-    total: number;
-    totalPages: number;
-    page: number;
-  }>
-> {
+}): Promise<TrackerActionResponse<TrackerPagingResponse>> {
   try {
     // Build the where clause based on the provided filters
     const where: any = {};
@@ -253,7 +257,10 @@ export async function getTrackers(filters?: {
     return {
       success: true,
       data: {
-        trackers,
+        trackers: trackers.map((tracker) => ({
+          ...tracker,
+          entriesCount: tracker._count?.entries || 0,
+        })),
         total,
         totalPages,
         page,

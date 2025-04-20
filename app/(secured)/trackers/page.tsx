@@ -1,8 +1,9 @@
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { getTrackers } from "@/app/actions/trackers";
+import { getTrackers, TrackerWithEntriesCount } from "@/app/actions/trackers";
 import { TrackerStatus, TrackerType } from "@/types";
 import TrackerFilters from "@/components/features/trackers/TrackerFilters";
+import TrackerCard from "@/components/features/trackers/TrackerCard";
 
 const PAGE_LIMIT_DEFAULT = 10;
 
@@ -45,7 +46,7 @@ export default async function TrackersPage( {
   } );
 
   // Extract data from the response
-  let trackers: any[] = [];
+  let trackers: TrackerWithEntriesCount[] = [];
   let totalPages = 1;
   let total = 0;
   let page = 1;
@@ -115,7 +116,10 @@ export default async function TrackersPage( {
             </div>
 
             {trackers.map( ( tracker ) => (
-              <TrackerListItem key={tracker.id} tracker={tracker} />
+              // <TrackerListItem key={tracker.id} tracker={tracker} />
+              <TrackerCard
+                key={tracker.id}
+                tracker={tracker} showEdit />
             ) )}
 
             {/* Pagination controls */}
@@ -275,91 +279,6 @@ function Pagination( { currentPage, totalPages, getPaginationUrl }: PaginationPr
           </svg>
         </Link>
       </nav>
-    </div>
-  );
-}
-
-// Tracker List Item Component
-function TrackerListItem( { tracker }: { tracker: any } ) {
-  // Helper function to get the icon for tracker type
-  const getTypeLabel = ( type: TrackerType ) => {
-    switch ( type ) {
-      case TrackerType.TIMER:
-        return "Timer";
-      case TrackerType.COUNTER:
-        return "Counter";
-      case TrackerType.AMOUNT:
-        return "Amount";
-      case TrackerType.OCCURRENCE:
-        return "Occurrence";
-      case TrackerType.CUSTOM:
-        return "Custom";
-      default:
-        return "Unknown";
-    }
-  };
-
-  // Helper function to format dates
-  const formatDate = ( dateString: string ) => {
-    return new Intl.DateTimeFormat( "en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    } ).format( new Date( dateString ) );
-  };
-
-  return (
-    <div className="bg-background border border-border rounded-lg p-4 hover:border-primary transition-colors">
-      <div className="flex flex-col sm:flex-row justify-between gap-4">
-        <div className="flex-grow">
-          <div className="flex items-center gap-2">
-            <h3 className="font-medium">{tracker.name}</h3>
-            <span className="bg-primary/10 text-primary px-2 py-0.5 rounded-full text-xs">
-              {getTypeLabel( tracker.type )}
-            </span>
-            {tracker.status === TrackerStatus.ARCHIVED && (
-              <span className="bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded-full text-xs">
-                Archived
-              </span>
-            )}
-          </div>
-
-          {tracker.description && (
-            <p className="text-sm text-foreground/70 mt-1">{tracker.description}</p>
-          )}
-
-          <div className="flex flex-wrap gap-2 mt-2">
-            {tracker.tags &&
-              tracker.tags.map( ( tag: string ) => (
-                <span
-                  key={tag}
-                  className="bg-primary/5 text-primary/90 px-2 py-0.5 rounded-full text-xs"
-                >
-                  {tag}
-                </span>
-              ) )}
-          </div>
-
-          <div className="flex items-center mt-2 text-xs text-foreground/60">
-            <span>Created: {formatDate( tracker.createdAt )}</span>
-            <span className="mx-2">•</span>
-            <span>Last used: {formatDate( tracker.updatedAt )}</span>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-end gap-2">
-          <Link href={`/trackers/${tracker.id}`} passHref>
-            <Button variant="outline" size="sm">
-              View
-            </Button>
-          </Link>
-          <Link href={`/trackers/${tracker.id}/edit`} passHref>
-            <Button variant="ghost" size="sm">
-              Edit
-            </Button>
-          </Link>
-        </div>
-      </div>
     </div>
   );
 }
