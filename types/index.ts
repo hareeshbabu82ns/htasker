@@ -74,6 +74,7 @@ export type TrackerFormValues = {
   name: string;
   description?: string;
   type: TrackerType;
+  status?: TrackerStatus; // Add optional status field
   tags: string[];
   color?: string;
   icon?: string;

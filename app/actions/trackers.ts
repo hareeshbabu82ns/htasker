@@ -25,6 +25,7 @@ const TrackerSchema = z.object({
   type: z.nativeEnum(TrackerType, {
     errorMap: () => ({ message: "Please select a valid tracker type" }),
   }),
+  status: z.nativeEnum(TrackerStatus).optional(),
   tags: z.array(z.string()).optional().default([]),
   color: z
     .string()

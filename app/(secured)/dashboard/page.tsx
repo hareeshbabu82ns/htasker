@@ -24,12 +24,12 @@ export default async function DashboardPage() {
   // Get the most recently updated trackers (based on updatedAt)
   const recentTrackers = [ ...activeTrackers ]
     .sort( ( a, b ) => b.updatedAt.getTime() - a.updatedAt.getTime() )
-    .slice( 0, 3 );
+    .slice( 0, 5 );
 
   // Get the most frequently used trackers (based on entry count)
   const frequentTrackers = [ ...activeTrackers ]
     .sort( ( a, b ) => b.entriesCount - a.entriesCount )
-    .slice( 0, 3 );
+    .slice( 0, 5 );
 
   // Combine and deduplicate (prioritizing recently used)
   const combinedTrackers = [ ...recentTrackers ];
@@ -39,15 +39,15 @@ export default async function DashboardPage() {
     }
   }
 
-  // Limit to at most 4 trackers for display
-  const displayTrackers = combinedTrackers.slice( 0, 4 );
+  // Limit to at most 5 trackers for display
+  const displayTrackers = combinedTrackers.slice( 0, 5 );
 
   return (
     <div className="space-y-6">
       {/* Welcome section */}
       <section className="bg-background border border-border rounded-lg p-6">
         <h2 className="text-2xl font-semibold mb-4">Welcome to HTracker</h2>
-        <p className="text-warning-foreground mb-6">
+        <p className="text-warning mb-6">
           Track your time, count anything, monitor expenses, or record occurrences - all in one place.
         </p>
         <div className="flex flex-wrap gap-4">
