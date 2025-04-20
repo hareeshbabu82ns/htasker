@@ -57,9 +57,9 @@ export default async function EditTrackerPage( {
       </div>
 
       {/* Info box */}
-      <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/30 p-4 rounded-lg">
+      <div className="bg-info border border-info-foreground/30 p-4 rounded-lg">
         <div className="flex items-start">
-          <div className="mr-3 text-amber-600 dark:text-amber-400">
+          <div className="mr-3 text-info-foreground">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
@@ -76,8 +76,8 @@ export default async function EditTrackerPage( {
             </svg>
           </div>
           <div>
-            <h3 className="font-medium text-amber-800 dark:text-amber-400">Edit with caution</h3>
-            <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
+            <h3 className="font-medium text-info-foreground">Edit with caution</h3>
+            <p className="text-sm text-info-foreground mt-1">
               Tracker type cannot be changed after creation. All other properties can be modified.
             </p>
           </div>

@@ -51,6 +51,7 @@ export default function OccurrenceTracker( { tracker, onUpdate }: OccurrenceTrac
     };
 
     loadEntries();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ tracker.id ] );
 
   // Calculate days since last occurrence

@@ -56,6 +56,7 @@ export default function CounterTracker( { tracker, onUpdate }: CounterTrackerPro
     };
 
     loadEntries();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ tracker.id ] );
 
   // Format date for display
@@ -162,20 +163,20 @@ export default function CounterTracker( { tracker, onUpdate }: CounterTrackerPro
 
       {/* Counter increment/decrement controls */}
       <div className="flex flex-col space-y-4">
-        {/* Change amount selector */}
+        {/* Change count selector */}
         <div className="flex justify-center items-center space-x-2 mb-2">
-          <span className="text-sm">Change amount:</span>
+          <span className="text-sm">Change count:</span>
           <div className="flex border border-border rounded-md overflow-hidden">
-            {[ 1, 5, 10 ].map( ( amount ) => (
+            {[ 1, 5, 10 ].map( ( count ) => (
               <button
-                key={amount}
-                onClick={() => setChangeAmount( amount )}
-                className={`px-3 py-1 text-sm ${changeAmount === amount
+                key={count}
+                onClick={() => setChangeAmount( count )}
+                className={`px-3 py-1 text-sm ${changeAmount === count
                   ? "bg-primary text-primary-foreground"
                   : "bg-background hover:bg-muted"
                   }`}
               >
-                {amount}
+                {count}
               </button>
             ) )}
           </div>

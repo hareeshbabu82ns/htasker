@@ -51,8 +51,7 @@ export default function DeleteTrackerButton( { trackerId }: DeleteTrackerButtonP
       {/* Delete button */}
       <Button
         onClick={handleDeleteClick}
-        variant="outline"
-        className="border-red-500 hover:bg-red-500/10 text-red-500"
+        variant="destructive"
         disabled={isDeleting || showConfirmation}
       >
         Delete
@@ -76,7 +75,7 @@ export default function DeleteTrackerButton( { trackerId }: DeleteTrackerButtonP
               </Button>
               <Button
                 onClick={handleConfirmDelete}
-                variant="danger"
+                variant="destructive"
                 disabled={isDeleting}
               >
                 {isDeleting ? "Deleting..." : "Delete Forever"}

@@ -46,7 +46,7 @@ export default async function DashboardPage() {
       {/* Welcome section */}
       <section className="bg-background border border-border rounded-lg p-6">
         <h2 className="text-2xl font-semibold mb-4">Welcome to HTracker</h2>
-        <p className="text-foreground/80 mb-6">
+        <p className="text-warning-foreground mb-6">
           Track your time, count anything, monitor expenses, or record occurrences - all in one place.
         </p>
         <div className="flex flex-wrap gap-4">

@@ -21,37 +21,38 @@ export default function CustomTracker( { tracker, onUpdate }: CustomTrackerProps
   const [ isLoadingEntries, setIsLoadingEntries ] = useState( false );
 
   // Fetch entries when component mounts or after updates
-  useEffect(() => {
+  useEffect( () => {
     const loadEntries = async () => {
-      setIsLoadingEntries(true);
+      setIsLoadingEntries( true );
       try {
-        const response = await fetchEntries({
+        const response = await fetchEntries( {
           trackerId: tracker.id,
           limit: 10
-        });
+        } );
 
-        if (response.success && response.data) {
-          setEntries(response.data as TrackerEntry[]);
+        if ( response.success && response.data ) {
+          setEntries( response.data as TrackerEntry[] );
         }
-      } catch (error) {
-        console.error("Failed to fetch custom entries:", error);
+      } catch ( error ) {
+        console.error( "Failed to fetch custom entries:", error );
       } finally {
-        setIsLoadingEntries(false);
+        setIsLoadingEntries( false );
       }
     };
 
     loadEntries();
-  }, [tracker.id]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ tracker.id ] );
 
   // Format date for display
-  const formatDate = (date: Date) => {
-    return new Intl.DateTimeFormat("en-US", {
+  const formatDate = ( date: Date ) => {
+    return new Intl.DateTimeFormat( "en-US", {
       month: "short",
       day: "numeric",
       year: "numeric",
       hour: "numeric",
       minute: "2-digit",
-    }).format(new Date(date));
+    } ).format( new Date( date ) );
   };
 
   // Handle adding a new tag
@@ -109,13 +110,13 @@ export default function CustomTracker( { tracker, onUpdate }: CustomTrackerProps
       setCustomTags( [] );
 
       // Refresh entries list after adding new entry
-      const result = await fetchEntries({
+      const result = await fetchEntries( {
         trackerId: tracker.id,
         limit: 10
-      });
-      
-      if (result.success) {
-        setEntries(result.data as TrackerEntry[]);
+      } );
+
+      if ( result.success ) {
+        setEntries( result.data as TrackerEntry[] );
       }
 
       // Call the onUpdate callback if provided
@@ -229,7 +230,7 @@ export default function CustomTracker( { tracker, onUpdate }: CustomTrackerProps
           </div>
         ) : entries.length > 0 ? (
           <div className="space-y-3">
-            {entries.map((entry) => (
+            {entries.map( ( entry ) => (
               <div key={entry.id} className="border border-border rounded-md p-3 text-sm">
                 <div className="flex justify-between items-start">
                   <div className="flex-grow">
@@ -244,25 +245,25 @@ export default function CustomTracker( { tracker, onUpdate }: CustomTrackerProps
                       </div>
                     )}
                     <div className="text-xs text-foreground/50 mt-1">
-                      {formatDate(entry.date)}
+                      {formatDate( entry.date )}
                     </div>
                   </div>
 
                   {entry.tags && entry.tags.length > 0 && (
                     <div className="flex flex-wrap gap-1 ml-2">
-                      {entry.tags.map((tag) => (
-                        <span 
-                          key={tag} 
+                      {entry.tags.map( ( tag ) => (
+                        <span
+                          key={tag}
                           className="inline-block text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary"
                         >
                           {tag}
                         </span>
-                      ))}
+                      ) )}
                     </div>
                   )}
                 </div>
               </div>
-            ))}
+            ) )}
           </div>
         ) : (
           <div className="text-center p-4 border border-dashed border-gray-300 dark:border-gray-700 rounded-md">
