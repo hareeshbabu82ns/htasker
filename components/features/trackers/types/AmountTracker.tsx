@@ -11,7 +11,7 @@ interface AmountTrackerProps {
 }
 
 export default function AmountTracker( { tracker, onUpdate }: AmountTrackerProps ) {
-  const { addEntry, fetchEntries, isLoading: isHookLoading } = useTracker();
+  const { addEntry, fetchEntries, fetchTracker, isLoading: isHookLoading } = useTracker();
   const [ amount, setAmount ] = useState( "" );
   const [ currency, setCurrency ] = useState( "USD" );
   const [ note, setNote ] = useState( "" );
@@ -51,21 +51,10 @@ export default function AmountTracker( { tracker, onUpdate }: AmountTrackerProps
   const calculateTotalFromAllEntries = async () => {
     setIsCalculatingTotal( true );
     try {
-      // Using a large limit to effectively get all entries
-      // In a production app, you might want to implement pagination or
-      // create a dedicated server action for this calculation
-      const result = await fetchEntries( {
-        trackerId: tracker.id,
-        limit: 1000, // Very large limit to get all entries
-      } );
-
-      if ( result.success ) {
-        // Calculate total from all entries
-        const total = result.data.reduce(
-          ( sum, entry ) => sum + ( entry.value || 0 ),
-          0
-        );
-        setTotalAmount( total );
+      const response = await fetchTracker( tracker.id );
+      if ( response.success ) {
+        const trackerData = response.data as Tracker;
+        setTotalAmount( trackerData.statistics?.totalValue || 0 );
       }
     } catch ( error ) {
       console.error( "Failed to calculate total:", error );

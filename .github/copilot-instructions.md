@@ -22,6 +22,7 @@ npx create-next-app@latest . --typescript --tailwind --eslint --app --use-npm
 - **Theme Management**: next-themes for dark/light mode support
 - **UI Component Library**: HeroUI for React components
 - **State Management**: React Context API and React Query v5+
+- **Server Actions**: using TanStack Query for server actions with async function call with type safety and error handling
 
 ## Architecture
 
@@ -32,7 +33,10 @@ htracker/
 ├── app/                    # App Router routes
 │   ├── api/                # API routes
 │   ├── (auth)/             # Authentication routes (grouped)
-│   ├── dashboard/          # Dashboard routes
+│   ├── (secured)/          # Authenticated Secure routes (grouped)
+│       ├── dashboard/      # Dashboard routes
+│       ├── trackers/       # Tracker routes
+│   ├── actions/            # Server Actions
 │   └── ...
 ├── components/             # React components
 │   ├── ui/                 # Reusable UI components
@@ -80,6 +84,193 @@ function QuickActionCard({ title, description }: QuickActionCardParams) {}
     | { status: "loading" }
     | { status: "error"; error: Error }
     | { status: "success"; data: Tracker };
+  ```
+
+### Server Actions using TanStack Query
+
+- Define server actions in dedicated files within the `app/actions` directory
+- Use TypeScript for type-safe server actions and response types
+- Implement TanStack Query's `useMutation` for client-side interaction
+- Follow this pattern for type-safe server actions:
+
+  ```typescript
+  // app/actions/tracker-actions.ts
+  "use server";
+
+  import { z } from "zod";
+  import { db } from "@/lib/db";
+
+  // Define response types using discriminated unions
+  export type TrackerActionResponse<T = unknown> =
+    | { status: "success"; data: T }
+    | { status: "error"; error: string };
+
+  // Define validation schema
+  const UpdateTrackerSchema = z.object({
+    id: z.string(),
+    name: z.string().min(1).max(50),
+    description: z.string().optional(),
+    type: z.enum(["TIMER", "COUNTER", "AMOUNT", "OCCURRENCE", "CUSTOM"]),
+    tags: z.array(z.string()).optional(),
+  });
+
+  // Type-safe server action
+  export async function updateTracker(
+    data: z.infer<typeof UpdateTrackerSchema>
+  ): Promise<TrackerActionResponse<Tracker>> {
+    try {
+      // Validate input
+      const validated = UpdateTrackerSchema.parse(data);
+
+      // Database operation
+      const updated = await db.tracker.update({
+        where: { id: validated.id },
+        data: validated,
+      });
+
+      return { status: "success", data: updated };
+    } catch (error) {
+      console.error("Tracker update failed:", error);
+
+      if (error instanceof z.ZodError) {
+        return {
+          status: "error",
+          error: `Validation error: ${error.errors
+            .map((e) => e.message)
+            .join(", ")}`,
+        };
+      }
+
+      return { status: "error", error: "Failed to update tracker" };
+    }
+  }
+  ```
+
+- Client-side implementation with TanStack Query:
+
+  ```typescript
+  // components/features/tracker/update-tracker-form.tsx
+  "use client";
+
+  import { useMutation, useQueryClient } from "@tanstack/react-query";
+  import { updateTracker } from "@/app/actions/tracker-actions";
+  import { useForm } from "react-hook-form";
+  import { zodResolver } from "@hookform/resolvers/zod";
+  import { z } from "zod";
+
+  // Match the schema used in server action
+  const formSchema = z.object({
+    id: z.string(),
+    name: z.string().min(1, "Name is required").max(50),
+    description: z.string().optional(),
+    type: z.enum(["TIMER", "COUNTER", "AMOUNT", "OCCURRENCE", "CUSTOM"]),
+    tags: z.array(z.string()).optional(),
+  });
+
+  type FormValues = z.infer<typeof formSchema>;
+
+  export function UpdateTrackerForm({ tracker }: { tracker: Tracker }) {
+    const queryClient = useQueryClient();
+    const form = useForm<FormValues>({
+      resolver: zodResolver(formSchema),
+      defaultValues: {
+        id: tracker.id,
+        name: tracker.name,
+        description: tracker.description,
+        type: tracker.type,
+        tags: tracker.tags,
+      },
+    });
+
+    // Setup mutation with proper typing
+    const mutation = useMutation({
+      mutationFn: updateTracker,
+      onSuccess: (data) => {
+        if (data.status === "success") {
+          // Invalidate queries to refetch data
+          queryClient.invalidateQueries({ queryKey: ["trackers"] });
+          toast.success("Tracker updated successfully");
+        } else {
+          // Handle validation or other expected errors
+          toast.error(data.error);
+        }
+      },
+      onError: (error: Error) => {
+        // Handle unexpected errors
+        console.error("Mutation error:", error);
+        toast.error("An unexpected error occurred");
+      },
+    });
+
+    const onSubmit = (values: FormValues) => {
+      mutation.mutate(values);
+    };
+
+    return (
+      <form onSubmit={form.handleSubmit(onSubmit)}>
+        {/* Form fields... */}
+        <button type="submit" disabled={mutation.isPending}>
+          {mutation.isPending ? "Saving..." : "Save Changes"}
+        </button>
+
+        {mutation.isError && (
+          <div className="text-red-500">
+            {mutation.error.message || "An error occurred"}
+          </div>
+        )}
+      </form>
+    );
+  }
+  ```
+
+- Type guard for response handling:
+
+  ```typescript
+  // Type guard to check successful response
+  function isSuccessResponse<T>(
+    response: TrackerActionResponse<T>
+  ): response is { status: "success"; data: T } {
+    return response.status === "success";
+  }
+
+  // Usage example
+  const result = await updateTracker(data);
+
+  if (isSuccessResponse(result)) {
+    // TypeScript knows result.data is of type T
+    return result.data;
+  } else {
+    // TypeScript knows result.error is a string
+    throw new Error(result.error);
+  }
+  ```
+
+- Error handling with TanStack Query's error boundaries:
+
+  ```typescript
+  import { QueryErrorResetBoundary } from "@tanstack/react-query";
+  import { ErrorBoundary } from "react-error-boundary";
+
+  function TrackerPage() {
+    return (
+      <QueryErrorResetBoundary>
+        {({ reset }) => (
+          <ErrorBoundary
+            onReset={reset}
+            fallbackRender={({ error, resetErrorBoundary }) => (
+              <div className="error-container">
+                <h2>Something went wrong!</h2>
+                <pre>{error.message}</pre>
+                <button onClick={() => resetErrorBoundary()}>Try again</button>
+              </div>
+            )}
+          >
+            <TrackerContent />
+          </ErrorBoundary>
+        )}
+      </QueryErrorResetBoundary>
+    );
+  }
   ```
 
 ### React Component Typing

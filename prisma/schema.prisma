@@ -29,47 +29,56 @@ model User {
 
 // Tracker model
 model Tracker {
-  id           String         @id @default(auto()) @map("_id") @db.ObjectId
-  name         String
-  description  String?
-  type         TrackerType
-  status       TrackerStatus  @default(ACTIVE)
-  tags         String[]
-  color        String?
-  icon         String?
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
-  userId       String         @db.ObjectId
-  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  entries      TrackerEntry[]
+  id          String             @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  description String?
+  type        TrackerType
+  status      TrackerStatus      @default(ACTIVE)
+  tags        String[]
+  color       String?
+  icon        String?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  userId      String             @db.ObjectId
+  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  statistics  TrackerStatistics?
+  entries     TrackerEntry[]
+}
+
+// TrackerStatistics model
+type TrackerStatistics {
+  totalEntries Int     @default(0)
+  totalTime    Float?  @default(0) // Total time in seconds for TIMER type
+  totalValue   Float?  @default(0) // Total value for COUNTER and AMOUNT types
+  totalCustom  String? @default("") // Custom data for CUSTOM type
 }
 
 // TrackerEntry model
 model TrackerEntry {
-  id         String    @id @default(auto()) @map("_id") @db.ObjectId
-  trackerId  String    @db.ObjectId
-  startTime  DateTime?
-  endTime    DateTime?
-  value      Float?
-  date       DateTime  @default(now())
-  note       String?
-  tags       String[]
-  createdAt  DateTime  @default(now())
-  tracker    Tracker   @relation(fields: [trackerId], references: [id], onDelete: Cascade)
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  trackerId String    @db.ObjectId
+  startTime DateTime?
+  endTime   DateTime?
+  value     Float?
+  date      DateTime  @default(now())
+  note      String?
+  tags      String[]
+  createdAt DateTime  @default(now())
+  tracker   Tracker   @relation(fields: [trackerId], references: [id], onDelete: Cascade)
 }
 
 // Tracker type enum
 enum TrackerType {
-  TIMER       // Start/stop with duration tracking
-  COUNTER     // Increment/decrement tracking
-  AMOUNT      // Numerical value tracking (e.g. money)
-  OCCURRENCE  // Date-based event tracking
-  CUSTOM      // User-defined tracking
+  TIMER // Start/stop with duration tracking
+  COUNTER // Increment/decrement tracking
+  AMOUNT // Numerical value tracking (e.g. money)
+  OCCURRENCE // Date-based event tracking
+  CUSTOM // User-defined tracking
 }
 
 // Tracker status enum
 enum TrackerStatus {
-  ACTIVE      // Currently running (for timers)
-  INACTIVE    // Not running but available  
-  ARCHIVED    // No longer in use
+  ACTIVE // Currently running (for timers)
+  INACTIVE // Not running but available  
+  ARCHIVED // No longer in use
 }

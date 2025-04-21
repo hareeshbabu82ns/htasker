@@ -11,9 +11,10 @@ interface TimerTrackerProps {
 }
 
 export default function TimerTracker( { tracker, onUpdate }: TimerTrackerProps ) {
-  const { addEntry, fetchEntries } = useTracker();
+  const { addEntry, fetchEntries, updateEntry, fetchTracker } = useTracker();
   const [ isRunning, setIsRunning ] = useState( false );
   const [ startTime, setStartTime ] = useState<Date | null>( null );
+  const [ currentEntryId, setCurrentEntryId ] = useState<string | null>( null );
   const [ elapsedTime, setElapsedTime ] = useState( 0 ); // in milliseconds
   const [ elapsedAccumulatedTime, setElapsedAccumulatedTime ] = useState( 0 ); // in milliseconds for all entries
   const [ isLoading, setIsLoading ] = useState( false );
@@ -23,18 +24,10 @@ export default function TimerTracker( { tracker, onUpdate }: TimerTrackerProps )
   // Calculate total duration from entries
   const calculateTotalDuration = async (): Promise<number> => {
     try {
-      const response = await fetchEntries( {
-        trackerId: tracker.id,
-        limit: 1000 // Use a large number to get all entries
-      } );
+      const response = await fetchTracker( tracker.id );
       if ( response.success ) {
-        const entries = response.data as TrackerEntry[];
-        return entries.reduce( ( total, entry ) => {
-          if ( entry.startTime && entry.endTime ) {
-            return total + calculateDuration( new Date( entry.startTime ), new Date( entry.endTime ) );
-          }
-          return total;
-        }, 0 );
+        const trackerData = response.data as Tracker;
+        return ( trackerData.statistics?.totalTime || 0 ) * 1000; // Convert seconds to milliseconds
       }
       return 0;
     } catch ( error ) {
@@ -50,12 +43,28 @@ export default function TimerTracker( { tracker, onUpdate }: TimerTrackerProps )
       try {
         const response = await fetchEntries( {
           trackerId: tracker.id,
-          limit: 5
+          limit: 10
         } );
 
         if ( response.success ) {
           const entriesData = response.data as TrackerEntry[];
-          setEntries( entriesData );
+          // Filter out entries where startTime equals endTime (in-progress entries)
+          const completedEntries = entriesData.filter( entry =>
+            entry.startTime && entry.endTime && new Date( entry.startTime ).getTime() !== new Date( entry.endTime ).getTime()
+          );
+          setEntries( completedEntries );
+
+          // Check if there's an in-progress entry
+          const inProgressEntry = entriesData.find( entry =>
+            entry.startTime && entry.endTime && new Date( entry.startTime ).getTime() === new Date( entry.endTime ).getTime()
+          );
+
+          if ( inProgressEntry ) {
+            setIsRunning( true );
+            setStartTime( new Date( inProgressEntry.startTime! ) );
+            setCurrentEntryId( inProgressEntry.id );
+          }
+
           // Calculate and set the elapsed time from entries
           const totalDuration = await calculateTotalDuration();
           setElapsedAccumulatedTime( totalDuration );
@@ -116,10 +125,32 @@ export default function TimerTracker( { tracker, onUpdate }: TimerTrackerProps )
   };
 
   // Handle starting the timer
-  const handleStart = () => {
-    const now = new Date();
-    setStartTime( now );
-    setIsRunning( true );
+  const handleStart = async () => {
+    setIsLoading( true );
+    try {
+      const now = new Date();
+      setStartTime( now );
+      setIsRunning( true );
+
+      // Create entry with the same start and end time to indicate "in progress"
+      const formData = new FormData();
+      formData.append( "trackerId", tracker.id );
+      formData.append( "startTime", now.toISOString() );
+      formData.append( "endTime", now.toISOString() ); // Same as start time to indicate in progress
+      formData.append( "date", now.toISOString() );
+
+      // Submit the entry
+      const response = await addEntry( formData );
+      if ( response.success && response.data ) {
+        setCurrentEntryId( ( response.data as TrackerEntry ).id );
+      }
+    } catch ( error ) {
+      console.error( "Failed to start timer:", error );
+      setIsRunning( false );
+      setStartTime( null );
+    } finally {
+      setIsLoading( false );
+    }
   };
 
   // Handle stopping the timer
@@ -128,21 +159,22 @@ export default function TimerTracker( { tracker, onUpdate }: TimerTrackerProps )
     setIsRunning( false );
 
     try {
-      if ( !startTime ) return;
+      if ( !startTime || !currentEntryId ) return;
 
       const now = new Date();
       const duration = now.getTime() - startTime.getTime();
 
-      // Only create entry if the timer ran for at least 1 second
+      // Only update entry if the timer ran for at least 1 second
       if ( duration >= 1000 ) {
         const formData = new FormData();
+        formData.append( "id", currentEntryId );
         formData.append( "trackerId", tracker.id );
         formData.append( "startTime", startTime.toISOString() );
         formData.append( "endTime", now.toISOString() );
-        formData.append( "date", now.toISOString() );
+        formData.append( "date", startTime.toISOString() );
 
-        // Submit the entry
-        await addEntry( formData );
+        // Update the entry
+        await updateEntry( formData );
 
         // Refresh entries
         const response = await fetchEntries( {
@@ -152,7 +184,12 @@ export default function TimerTracker( { tracker, onUpdate }: TimerTrackerProps )
 
         if ( response.success ) {
           const entriesData = response.data as TrackerEntry[];
-          setEntries( entriesData );
+          // Filter out entries where startTime equals endTime (in-progress entries)
+          const completedEntries = entriesData.filter( entry =>
+            entry.startTime && entry.endTime && new Date( entry.startTime ).getTime() !== new Date( entry.endTime ).getTime()
+          );
+          setEntries( completedEntries );
+
           // Update the total accumulated time after adding a new entry
           const totalDuration = await calculateTotalDuration();
           setElapsedAccumulatedTime( totalDuration );
@@ -161,10 +198,14 @@ export default function TimerTracker( { tracker, onUpdate }: TimerTrackerProps )
 
         // Call the onUpdate callback if provided
         if ( onUpdate ) onUpdate();
+      } else {
+        // For very short timer sessions (less than 1 second), delete the entry
+        // This would require an additional deleteEntry function in useTracker
       }
 
       // Reset timer state
       setStartTime( null );
+      setCurrentEntryId( null );
     } catch ( error ) {
       console.error( "Failed to save timer session:", error );
     } finally {

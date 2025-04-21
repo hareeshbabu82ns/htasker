@@ -11,7 +11,7 @@ interface CounterTrackerProps {
 }
 
 export default function CounterTracker( { tracker, onUpdate }: CounterTrackerProps ) {
-  const { addEntry, fetchEntries } = useTracker();
+  const { addEntry, fetchEntries, fetchTracker } = useTracker();
   const [ currentValue, setCurrentValue ] = useState( 0 );
   const [ isLoading, setIsLoading ] = useState( false );
   const [ changeAmount, setChangeAmount ] = useState( 1 );
@@ -24,19 +24,16 @@ export default function CounterTracker( { tracker, onUpdate }: CounterTrackerPro
       setIsLoadingEntries( true );
       try {
         // First fetch all entries to calculate the total correctly
-        const allEntriesResponse = await fetchEntries( {
-          trackerId: tracker.id,
-          limit: 1000 // Use a large number to get all entries
-        } );
+        const response = await fetchTracker( tracker.id );
+        if ( response.success ) {
+          const trackerData = response.data as Tracker;
+          setCurrentValue( trackerData.statistics?.totalValue || 0 );
+        }
 
         // Calculate the current value based on ALL entries
-        if ( allEntriesResponse.success && allEntriesResponse.data ) {
-          const allEntries = allEntriesResponse.data as TrackerEntry[];
-          const total = allEntries.reduce(
-            ( sum, entry ) => sum + ( entry.value || 0 ),
-            0
-          );
-          setCurrentValue( total );
+        if ( response.success && response.data ) {
+          const entry = response.data as Tracker;
+          setCurrentValue( entry.statistics?.totalValue || 0 );
         }
 
         // Now fetch just the recent entries for display

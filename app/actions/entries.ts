@@ -27,6 +27,108 @@ const EntrySchema = z.object({
 export type CreateEntryInput = z.infer<typeof EntrySchema>;
 
 /**
+ * Update tracker statistics based on tracker type and entry data
+ * This is used internally by the API functions to keep statistics in sync
+ */
+// async function updateTrackerStatistics(trackerId: string): Promise<void> {
+//   // Get the tracker to determine its type
+//   const tracker = await prisma.tracker.findUnique({
+//     where: { id: trackerId },
+//     select: { type: true },
+//   });
+
+//   if (!tracker) return;
+
+//   // Based on the tracker type, update the statistics accordingly
+//   switch (tracker.type) {
+//     case "TIMER":
+//       // For timer trackers: Calculate total time and count of entries
+//       const timerStats = await prisma.trackerEntry.aggregate({
+//         where: {
+//           trackerId,
+//           startTime: { not: null },
+//           endTime: { not: null },
+//         },
+//         _count: { id: true },
+//         _sum: {
+//           // Using a workaround since MongoDB doesn't support duration calculation directly
+//           // We're assuming each entry with start/end has been properly calculated
+//           value: true, // We'll store duration in 'value' field for completed timer entries
+//         },
+//       });
+
+//       await prisma.tracker.update({
+//         where: { id: trackerId },
+//         data: {
+//           statistics: {
+//             totalEntries: timerStats._count.id,
+//             totalTime: timerStats._sum.value || 0,
+//           },
+//         },
+//       });
+//       break;
+
+//     case "COUNTER":
+//     case "AMOUNT":
+//       // For counter/amount trackers: Calculate total value and count of entries
+//       const valueStats = await prisma.trackerEntry.aggregate({
+//         where: { trackerId, value: { not: null } },
+//         _count: { id: true },
+//         _sum: { value: true },
+//       });
+
+//       await prisma.tracker.update({
+//         where: { id: trackerId },
+//         data: {
+//           statistics: {
+//             totalEntries: valueStats._count.id,
+//             totalValue: valueStats._sum.value || 0,
+//           },
+//         },
+//       });
+//       break;
+
+//     case "OCCURRENCE":
+//       // For occurrence trackers: Just count entries
+//       const occurrenceCount = await prisma.trackerEntry.count({
+//         where: { trackerId },
+//       });
+
+//       await prisma.tracker.update({
+//         where: { id: trackerId },
+//         data: {
+//           statistics: {
+//             totalEntries: occurrenceCount,
+//           },
+//         },
+//       });
+//       break;
+
+//     case "CUSTOM":
+//       // For custom trackers: Just count entries and maintain any custom data
+//       const customCount = await prisma.trackerEntry.count({
+//         where: { trackerId },
+//       });
+
+//       const currentTracker = await prisma.tracker.findUnique({
+//         where: { id: trackerId },
+//         select: { statistics: true },
+//       });
+
+//       await prisma.tracker.update({
+//         where: { id: trackerId },
+//         data: {
+//           statistics: {
+//             totalEntries: customCount,
+//             totalCustom: currentTracker?.statistics?.totalCustom || "",
+//           },
+//         },
+//       });
+//       break;
+//   }
+// }
+
+/**
  * Create a new tracker entry
  */
 export async function createEntry(
@@ -36,21 +138,119 @@ export async function createEntry(
     // Validate input data
     const validatedData = EntrySchema.parse(data);
 
-    // Create entry in database
-    const entry = await prisma.trackerEntry.create({
-      data: validatedData,
-    });
+    // Use a transaction to ensure atomic operations
+    const result = await prisma.$transaction(async (tx) => {
+      // Create entry in database
+      const entry = await tx.trackerEntry.create({
+        data: validatedData,
+      });
 
-    // Update the tracker's last used timestamp
-    await prisma.tracker.update({
-      where: { id: data.trackerId },
-      data: { updatedAt: new Date() },
+      // Calculate duration for timer entries if both start and end times are provided
+      if (
+        validatedData.startTime &&
+        validatedData.endTime &&
+        !validatedData.value
+      ) {
+        const durationInSeconds = Math.round(
+          (validatedData.endTime.getTime() -
+            validatedData.startTime.getTime()) /
+            1000
+        );
+
+        // Update the entry with the calculated duration stored in value field
+        await tx.trackerEntry.update({
+          where: { id: entry.id },
+          data: { value: durationInSeconds },
+        });
+      }
+
+      // Update the tracker's last used timestamp
+      await tx.tracker.update({
+        where: { id: data.trackerId },
+        data: { updatedAt: new Date() },
+      });
+
+      // Get the tracker to determine its type
+      const tracker = await tx.tracker.findUnique({
+        where: { id: data.trackerId },
+        select: { type: true, statistics: true },
+      });
+
+      if (!tracker) {
+        throw new Error("Tracker not found");
+      }
+
+      // Update statistics based on tracker type
+      switch (tracker.type) {
+        case "TIMER":
+          // Only update completed timer entries
+          if (validatedData.startTime && validatedData.endTime) {
+            const durationInSeconds = Math.round(
+              (validatedData.endTime.getTime() -
+                validatedData.startTime.getTime()) /
+                1000
+            );
+
+            const currentEntries = tracker.statistics?.totalEntries || 0;
+            const currentTime = tracker.statistics?.totalTime || 0;
+
+            await tx.tracker.update({
+              where: { id: data.trackerId },
+              data: {
+                statistics: {
+                  totalEntries: currentEntries + 1,
+                  totalTime: currentTime + durationInSeconds,
+                },
+              },
+            });
+          }
+          break;
+
+        case "COUNTER":
+        case "AMOUNT":
+          if (
+            validatedData.value !== null &&
+            validatedData.value !== undefined
+          ) {
+            const currentEntries = tracker.statistics?.totalEntries || 0;
+            const currentValue = tracker.statistics?.totalValue || 0;
+
+            await tx.tracker.update({
+              where: { id: data.trackerId },
+              data: {
+                statistics: {
+                  totalEntries: currentEntries + 1,
+                  totalValue: currentValue + validatedData.value,
+                },
+              },
+            });
+          }
+          break;
+
+        case "OCCURRENCE":
+        case "CUSTOM":
+          const currentEntries = tracker.statistics?.totalEntries || 0;
+
+          await tx.tracker.update({
+            where: { id: data.trackerId },
+            data: {
+              statistics: {
+                totalEntries: currentEntries + 1,
+                // Preserve any existing custom data
+                totalCustom: tracker.statistics?.totalCustom,
+              },
+            },
+          });
+          break;
+      }
+
+      return entry;
     });
 
     revalidatePath("/dashboard");
     revalidatePath(`/trackers/${data.trackerId}`);
 
-    return { success: true, data: { id: entry.id } };
+    return { success: true, data: { id: result.id } };
   } catch (error) {
     console.error("Error creating entry:", error);
 
@@ -100,10 +300,133 @@ export async function updateEntry(
     // Validate update data
     const validatedData = EntrySchema.partial().parse(data);
 
-    // Update entry in database
-    const entry = await prisma.trackerEntry.update({
-      where: { id },
-      data: validatedData,
+    // Use a transaction to ensure atomic operations
+    const result = await prisma.$transaction(async (tx) => {
+      // Get the original entry to compare changes
+      const originalEntry = await tx.trackerEntry.findUnique({
+        where: { id },
+        select: {
+          trackerId: true,
+          startTime: true,
+          endTime: true,
+          value: true,
+        },
+      });
+
+      if (!originalEntry) {
+        throw new Error("Entry not found");
+      }
+
+      // Update entry in database
+      const entry = await tx.trackerEntry.update({
+        where: { id },
+        data: validatedData,
+      });
+
+      // Handle calculated duration for timer entries
+      const trackerId = validatedData.trackerId || originalEntry.trackerId;
+      if (
+        (validatedData.startTime || originalEntry.startTime) &&
+        (validatedData.endTime || originalEntry.endTime) &&
+        !validatedData.value
+      ) {
+        const startTime = validatedData.startTime || originalEntry.startTime;
+        const endTime = validatedData.endTime || originalEntry.endTime;
+
+        if (startTime && endTime) {
+          const durationInSeconds = Math.round(
+            (endTime.getTime() - startTime.getTime()) / 1000
+          );
+
+          // Update the entry with the calculated duration
+          await tx.trackerEntry.update({
+            where: { id: entry.id },
+            data: { value: durationInSeconds },
+          });
+        }
+      }
+
+      // Get the tracker to determine its type for statistics
+      const tracker = await tx.tracker.findUnique({
+        where: { id: trackerId },
+        select: { type: true },
+      });
+
+      if (tracker) {
+        // Recalculate all statistics for the tracker
+        // This is a simpler approach than calculating the exact change
+        // and works for all tracker types and edge cases
+
+        switch (tracker.type) {
+          case "TIMER":
+            const timerStats = await tx.trackerEntry.aggregate({
+              where: {
+                trackerId,
+                startTime: { not: null },
+                endTime: { not: null },
+              },
+              _count: { id: true },
+              _sum: { value: true }, // Using value field for duration
+            });
+
+            await tx.tracker.update({
+              where: { id: trackerId },
+              data: {
+                statistics: {
+                  totalEntries: timerStats._count.id,
+                  totalTime: timerStats._sum.value || 0,
+                },
+                updatedAt: new Date(),
+              },
+            });
+            break;
+
+          case "COUNTER":
+          case "AMOUNT":
+            const valueStats = await tx.trackerEntry.aggregate({
+              where: { trackerId, value: { not: null } },
+              _count: { id: true },
+              _sum: { value: true },
+            });
+
+            await tx.tracker.update({
+              where: { id: trackerId },
+              data: {
+                statistics: {
+                  totalEntries: valueStats._count.id,
+                  totalValue: valueStats._sum.value || 0,
+                },
+                updatedAt: new Date(),
+              },
+            });
+            break;
+
+          case "OCCURRENCE":
+          case "CUSTOM":
+            const customCount = await tx.trackerEntry.count({
+              where: { trackerId },
+            });
+
+            const currentTracker = await tx.tracker.findUnique({
+              where: { id: trackerId },
+              select: { statistics: true },
+            });
+
+            await tx.tracker.update({
+              where: { id: trackerId },
+              data: {
+                statistics: {
+                  totalEntries: customCount,
+                  totalCustom: currentTracker?.statistics?.totalCustom || "",
+                },
+                updatedAt: new Date(),
+              },
+            });
+            break;
+        }
+      }
+
+      return entry;
     });
 
     // If trackerId is available, refresh that tracker's page
@@ -113,7 +436,7 @@ export async function updateEntry(
 
     revalidatePath("/dashboard");
 
-    return { success: true, data: { id: entry.id } };
+    return { success: true, data: { id: result.id } };
   } catch (error) {
     console.error("Error updating entry:", error);
 
@@ -137,22 +460,99 @@ export async function deleteEntry(
   id: string
 ): Promise<EntryActionResponse<{ id: string }>> {
   try {
-    // First get the tracker ID for revalidation
-    const entry = await prisma.trackerEntry.findUnique({
-      where: { id },
-      select: { trackerId: true },
+    // Use transaction for atomic operations
+    const result = await prisma.$transaction(async (tx) => {
+      // Get the entry for reference
+      const entry = await tx.trackerEntry.findUnique({
+        where: { id },
+        select: {
+          id: true,
+          trackerId: true,
+          value: true,
+          startTime: true,
+          endTime: true,
+        },
+      });
+
+      if (!entry) {
+        throw new Error("Entry not found");
+      }
+
+      // Get the tracker to determine its type
+      const tracker = await tx.tracker.findUnique({
+        where: { id: entry.trackerId },
+        select: { type: true, statistics: true },
+      });
+
+      if (!tracker) {
+        throw new Error("Tracker not found");
+      }
+
+      // Delete the entry
+      await tx.trackerEntry.delete({ where: { id } });
+
+      // Update tracker statistics
+      switch (tracker.type) {
+        case "TIMER":
+          // Only adjust completed timer entries with duration
+          if (entry.startTime && entry.endTime && entry.value) {
+            const currentEntries = tracker.statistics?.totalEntries || 0;
+            const currentTime = tracker.statistics?.totalTime || 0;
+
+            await tx.tracker.update({
+              where: { id: entry.trackerId },
+              data: {
+                statistics: {
+                  totalEntries: Math.max(0, currentEntries - 1),
+                  totalTime: Math.max(0, currentTime - (entry.value || 0)),
+                },
+                updatedAt: new Date(),
+              },
+            });
+          }
+          break;
+
+        case "COUNTER":
+        case "AMOUNT":
+          if (entry.value !== null && entry.value !== undefined) {
+            const currentEntries = tracker.statistics?.totalEntries || 0;
+            const currentValue = tracker.statistics?.totalValue || 0;
+
+            await tx.tracker.update({
+              where: { id: entry.trackerId },
+              data: {
+                statistics: {
+                  totalEntries: Math.max(0, currentEntries - 1),
+                  totalValue: Math.max(0, currentValue - entry.value),
+                },
+                updatedAt: new Date(),
+              },
+            });
+          }
+          break;
+
+        case "OCCURRENCE":
+        case "CUSTOM":
+          const currentEntries = tracker.statistics?.totalEntries || 0;
+
+          await tx.tracker.update({
+            where: { id: entry.trackerId },
+            data: {
+              statistics: {
+                totalEntries: Math.max(0, currentEntries - 1),
+                // Preserve existing custom data
+                totalCustom: tracker.statistics?.totalCustom,
+              },
+              updatedAt: new Date(),
+            },
+          });
+          break;
+      }
+
+      return entry;
     });
 
-    if (!entry) {
-      return { success: false, error: "Entry not found" };
-    }
-
-    // Delete entry from database
-    await prisma.trackerEntry.delete({
-      where: { id },
-    });
-
-    revalidatePath(`/trackers/${entry.trackerId}`);
+    revalidatePath(`/trackers/${result.trackerId}`);
     revalidatePath("/dashboard");
 
     return { success: true, data: { id } };
@@ -191,29 +591,34 @@ export async function startTimerEntry(
   note: string = ""
 ): Promise<EntryActionResponse<{ id: string }>> {
   try {
-    // Create a new entry with start time
-    const entry = await prisma.trackerEntry.create({
-      data: {
-        trackerId,
-        startTime: new Date(),
-        note,
-        date: new Date(),
-      },
-    });
+    // Use a transaction for atomic operations
+    const result = await prisma.$transaction(async (tx) => {
+      // Create a new entry with start time
+      const entry = await tx.trackerEntry.create({
+        data: {
+          trackerId,
+          startTime: new Date(),
+          note,
+          date: new Date(),
+        },
+      });
 
-    // Update tracker status to ACTIVE
-    await prisma.tracker.update({
-      where: { id: trackerId },
-      data: {
-        status: "ACTIVE",
-        updatedAt: new Date(),
-      },
+      // Update tracker status to ACTIVE
+      await tx.tracker.update({
+        where: { id: trackerId },
+        data: {
+          status: "ACTIVE",
+          updatedAt: new Date(),
+        },
+      });
+
+      return entry;
     });
 
     revalidatePath(`/trackers/${trackerId}`);
     revalidatePath("/dashboard");
 
-    return { success: true, data: { id: entry.id } };
+    return { success: true, data: { id: result.id } };
   } catch (error) {
     console.error("Error starting timer entry:", error);
     return { success: false, error: "Failed to start timer" };
@@ -228,56 +633,77 @@ export async function stopTimerEntry(
   additionalNote: string = ""
 ): Promise<EntryActionResponse<{ id: string; duration: number }>> {
   try {
-    // Get the current entry
-    const currentEntry = await prisma.trackerEntry.findUnique({
-      where: { id: entryId },
-      select: { trackerId: true, startTime: true, note: true },
+    // Use transaction for atomic operations
+    const result = await prisma.$transaction(async (tx) => {
+      // Get the current entry
+      const currentEntry = await tx.trackerEntry.findUnique({
+        where: { id: entryId },
+        select: { id: true, trackerId: true, startTime: true, note: true },
+      });
+
+      if (!currentEntry || !currentEntry.startTime) {
+        throw new Error("Timer entry not found or invalid");
+      }
+
+      const endTime = new Date();
+      const updatedNote = additionalNote
+        ? `${currentEntry.note || ""} ${additionalNote}`.trim()
+        : currentEntry.note;
+
+      // Calculate duration in seconds
+      const duration = Math.round(
+        (endTime.getTime() - currentEntry.startTime.getTime()) / 1000
+      );
+
+      // Update the entry with end time and duration (stored in value field)
+      const entry = await tx.trackerEntry.update({
+        where: { id: entryId },
+        data: {
+          endTime,
+          note: updatedNote,
+          value: duration, // Store duration in value field for statistics
+        },
+      });
+
+      // Get the tracker information for statistics update
+      const tracker = await tx.tracker.findUnique({
+        where: { id: currentEntry.trackerId },
+        select: { statistics: true },
+      });
+
+      // Update tracker status back to INACTIVE and update statistics
+      await tx.tracker.update({
+        where: { id: currentEntry.trackerId },
+        data: {
+          status: "INACTIVE",
+          updatedAt: new Date(),
+          statistics: {
+            totalEntries: (tracker?.statistics?.totalEntries || 0) + 1,
+            totalTime: (tracker?.statistics?.totalTime || 0) + duration,
+          },
+        },
+      });
+
+      return { entry, duration };
     });
 
-    if (!currentEntry || !currentEntry.startTime) {
-      return { success: false, error: "Timer entry not found or invalid" };
-    }
-
-    const endTime = new Date();
-    const updatedNote = additionalNote
-      ? `${currentEntry.note || ""} ${additionalNote}`.trim()
-      : currentEntry.note;
-
-    // Update the entry with end time
-    const entry = await prisma.trackerEntry.update({
-      where: { id: entryId },
-      data: {
-        endTime,
-        note: updatedNote,
-      },
-    });
-
-    // Update tracker status back to INACTIVE
-    await prisma.tracker.update({
-      where: { id: currentEntry.trackerId },
-      data: {
-        status: "INACTIVE",
-        updatedAt: new Date(),
-      },
-    });
-
-    // Calculate duration in seconds
-    const duration = Math.round(
-      (endTime.getTime() - currentEntry.startTime.getTime()) / 1000
-    );
-
-    revalidatePath(`/trackers/${currentEntry.trackerId}`);
+    revalidatePath(`/trackers/${result.entry.trackerId}`);
     revalidatePath("/dashboard");
 
     return {
       success: true,
       data: {
-        id: entry.id,
-        duration,
+        id: result.entry.id,
+        duration: result.duration,
       },
     };
   } catch (error) {
     console.error("Error stopping timer entry:", error);
+
+    if (error instanceof Error) {
+      return { success: false, error: error.message };
+    }
+
     return { success: false, error: "Failed to stop timer" };
   }
 }
@@ -291,26 +717,43 @@ export async function addCounterEntry(
   note: string = ""
 ): Promise<EntryActionResponse<{ id: string }>> {
   try {
-    // Create a new counter entry
-    const entry = await prisma.trackerEntry.create({
-      data: {
-        trackerId,
-        value,
-        note,
-        date: new Date(),
-      },
-    });
+    // Use transaction for atomic operations
+    const result = await prisma.$transaction(async (tx) => {
+      // Create a new counter entry
+      const entry = await tx.trackerEntry.create({
+        data: {
+          trackerId,
+          value,
+          note,
+          date: new Date(),
+        },
+      });
 
-    // Update tracker's last used timestamp
-    await prisma.tracker.update({
-      where: { id: trackerId },
-      data: { updatedAt: new Date() },
+      // Get the tracker for statistics update
+      const tracker = await tx.tracker.findUnique({
+        where: { id: trackerId },
+        select: { statistics: true },
+      });
+
+      // Update tracker's statistics and timestamp
+      await tx.tracker.update({
+        where: { id: trackerId },
+        data: {
+          updatedAt: new Date(),
+          statistics: {
+            totalEntries: (tracker?.statistics?.totalEntries || 0) + 1,
+            totalValue: (tracker?.statistics?.totalValue || 0) + value,
+          },
+        },
+      });
+
+      return entry;
     });
 
     revalidatePath(`/trackers/${trackerId}`);
     revalidatePath("/dashboard");
 
-    return { success: true, data: { id: entry.id } };
+    return { success: true, data: { id: result.id } };
   } catch (error) {
     console.error("Error adding counter entry:", error);
     return { success: false, error: "Failed to add counter entry" };

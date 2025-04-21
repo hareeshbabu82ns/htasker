@@ -2,17 +2,19 @@ import TrackerForm from "@/components/features/trackers/TrackerForm";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getTracker } from "@/app/actions/trackers";
-import { Tracker, TrackerFormValues, TrackerStatus } from "@/types";
+import { Tracker, TrackerFormValues } from "@/types";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { TriangleAlert } from "lucide-react";
 
 export default async function EditTrackerPage( {
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 } ) {
+  const resolvedParams = await params;
+
   // Fetch the tracker by ID
-  const response = await getTracker( params.id );
+  const response = await getTracker( resolvedParams.id );
 
   // Handle not found
   if ( !response.success ) {
@@ -38,7 +40,7 @@ export default async function EditTrackerPage( {
       {/* Header */}
       <div>
         <Link
-          href={`/trackers/${params.id}`}
+          href={`/trackers/${resolvedParams.id}`}
           className="text-sm text-foreground/70 hover:text-foreground flex items-center gap-1"
         >
           <svg
@@ -72,7 +74,7 @@ export default async function EditTrackerPage( {
       <div className="bg-background border border-border p-6 rounded-lg">
         <TrackerForm
           initialData={initialData}
-          trackerId={params.id}
+          trackerId={resolvedParams.id}
         />
       </div>
     </div>

@@ -6,14 +6,17 @@ import {
   updateTracker,
   deleteTracker,
   CreateTrackerInput,
+  getTracker,
 } from "@/app/actions/trackers";
-import { 
-  createEntry, 
+import {
+  createEntry,
   getEntriesByTracker,
-  CreateEntryInput 
+  updateEntry as updateEntryAction,
+  deleteEntry as deleteEntryAction,
+  CreateEntryInput,
 } from "@/app/actions/entries";
 import { useState } from "react";
-import { Tracker, TrackerEntry, TrackerStatus, TrackerType } from "@/types";
+import { TrackerStatus, TrackerType } from "@/types";
 
 export function useTracker() {
   const [isLoading, setIsLoading] = useState(false);
@@ -51,6 +54,34 @@ export function useTracker() {
     }
   };
 
+  const fetchTracker = async (id: string) => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await getTracker(id);
+
+      if (!response.success) {
+        setError(response.error || "Failed to fetch tracker");
+        return { success: false };
+      }
+
+      // Adapt to the actual response structure
+      // Use the actual type from the API response
+      const tracker = response.data;
+
+      return {
+        success: true,
+        data: tracker,
+      };
+    } catch (_err) {
+      setError("An unexpected error occurred");
+      return { success: false };
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Fetch trackers with filtering options
   const fetchTrackers = async ({
     status,
@@ -79,20 +110,21 @@ export function useTracker() {
       }
 
       // Adapt to the actual response structure
-      const trackers = response.data as any[];
+      // Use the actual type from the API response
+      const trackers = response.data;
 
       return {
         success: true,
         data: {
           trackers,
           pagination: {
-            total: trackers.length,
+            total: Array.isArray(trackers) ? trackers.length : 0,
             page: page || 1,
             limit: limit || 10,
           },
         },
       };
-    } catch (err) {
+    } catch (_err) {
       setError("An unexpected error occurred");
       return { success: false };
     } finally {
@@ -114,7 +146,7 @@ export function useTracker() {
       }
 
       return { success: true };
-    } catch (err) {
+    } catch (_err) {
       setError("An unexpected error occurred");
       return { success: false };
     } finally {
@@ -136,7 +168,7 @@ export function useTracker() {
       }
 
       return { success: true };
-    } catch (err) {
+    } catch (_err) {
       setError("An unexpected error occurred");
       return { success: false };
     } finally {
@@ -154,14 +186,14 @@ export function useTracker() {
       const entryData: CreateEntryInput = {
         trackerId: formData.get("trackerId") as string,
         date: new Date(),
-        startTime: formData.get("startTime") 
-          ? new Date(formData.get("startTime") as string) 
+        startTime: formData.get("startTime")
+          ? new Date(formData.get("startTime") as string)
           : undefined,
-        endTime: formData.get("endTime") 
-          ? new Date(formData.get("endTime") as string) 
+        endTime: formData.get("endTime")
+          ? new Date(formData.get("endTime") as string)
           : undefined,
-        value: formData.get("value") 
-          ? parseFloat(formData.get("value") as string) 
+        value: formData.get("value")
+          ? parseFloat(formData.get("value") as string)
           : undefined,
         note: (formData.get("note") as string) || undefined,
         tags: formData.getAll("tags").map((tag) => tag as string),
@@ -175,9 +207,89 @@ export function useTracker() {
       }
 
       return { success: true, data: response.data };
-    } catch (err) {
+    } catch (_err) {
       setError("An unexpected error occurred");
       return { success: false };
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Update an existing entry
+  const updateEntry = async (formData: FormData) => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const entryId = formData.get("id") as string;
+
+      if (!entryId) {
+        setError("Entry ID is required for update");
+        return { success: false, error: "Entry ID is required" };
+      }
+
+      // Convert FormData to the expected update structure
+      const updateData: Partial<CreateEntryInput> = {
+        trackerId: formData.get("trackerId") as string,
+        startTime: formData.get("startTime")
+          ? new Date(formData.get("startTime") as string)
+          : undefined,
+        endTime: formData.get("endTime")
+          ? new Date(formData.get("endTime") as string)
+          : undefined,
+        value: formData.get("value")
+          ? parseFloat(formData.get("value") as string)
+          : undefined,
+        note: (formData.get("note") as string) || undefined,
+        tags: formData.has("tags")
+          ? formData.getAll("tags").map((tag) => tag as string)
+          : undefined,
+      };
+
+      // Only include fields that are actually present in the FormData
+      Object.keys(updateData).forEach((key) => {
+        if (
+          updateData[key as keyof typeof updateData] === undefined &&
+          !formData.has(key)
+        ) {
+          delete updateData[key as keyof typeof updateData];
+        }
+      });
+
+      const response = await updateEntryAction(entryId, updateData);
+
+      if (!response.success) {
+        setError(response.error || "Failed to update entry");
+        return { success: false, error: response.error };
+      }
+
+      return { success: true, data: response.data };
+    } catch (err) {
+      console.error("Error updating entry:", err);
+      setError("An unexpected error occurred");
+      return { success: false, error: "An unexpected error occurred" };
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Delete an entry
+  const deleteEntry = async (entryId: string) => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await deleteEntryAction(entryId);
+
+      if (!response.success) {
+        setError(response.error || "Failed to delete entry");
+        return { success: false, error: response.error };
+      }
+
+      return { success: true, data: response.data };
+    } catch (_err) {
+      setError("An unexpected error occurred");
+      return { success: false, error: "An unexpected error occurred" };
     } finally {
       setIsLoading(false);
     }
@@ -217,7 +329,7 @@ export function useTracker() {
           limit: limit || 50,
         },
       };
-    } catch (err) {
+    } catch (_err) {
       setError("An unexpected error occurred");
       return { success: false };
     } finally {
@@ -230,9 +342,12 @@ export function useTracker() {
     error,
     addTracker,
     fetchTrackers,
+    fetchTracker,
     changeStatus,
     removeTracker,
     addEntry,
+    updateEntry,
+    deleteEntry,
     fetchEntries,
   };
 }

@@ -9,10 +9,13 @@ import DeleteTrackerButton from "@/components/features/trackers/DeleteTrackerBut
 export default async function TrackerDetailPage( {
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 } ) {
+
+  const resolvedParams = await params;
+
   // Fetch the tracker by ID
-  const response = await getTracker( params.id );
+  const response = await getTracker( resolvedParams.id );
 
   // Handle not found
   if ( !response.success ) {
@@ -50,10 +53,10 @@ export default async function TrackerDetailPage( {
         </div>
 
         <div className="flex gap-2">
-          <Link href={`/trackers/${params.id}/edit`} passHref>
+          <Link href={`/trackers/${resolvedParams.id}/edit`} passHref>
             <Button variant="outline">Edit</Button>
           </Link>
-          <DeleteTrackerButton trackerId={params.id} />
+          <DeleteTrackerButton trackerId={resolvedParams.id} />
         </div>
       </div>
 

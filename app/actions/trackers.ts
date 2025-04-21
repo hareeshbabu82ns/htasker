@@ -11,6 +11,13 @@ export type TrackerActionResponse<T = unknown> =
   | { success: true; data: T }
   | { success: false; error: string };
 
+export type TrackerStatistics = {
+  totalEntries: number;
+  totalTime: number;
+  totalValue: number;
+  totalCustom: string;
+};
+
 // Validation schema for creating/updating a tracker
 const TrackerSchema = z.object({
   name: z
@@ -33,6 +40,15 @@ const TrackerSchema = z.object({
     .optional()
     .nullable(),
   icon: z.string().optional().nullable(),
+  statistics: z
+    .object({
+      totalEntries: z.number().optional().default(0),
+      totalTime: z.number().optional(),
+      totalValue: z.number().optional(),
+      totalCustom: z.string().optional(),
+    })
+    .optional()
+    .nullable(),
 });
 
 export type CreateTrackerInput = z.infer<typeof TrackerSchema>;
@@ -246,11 +262,11 @@ export async function getTrackers(filters?: {
     const trackers = await prisma.tracker.findMany({
       where,
       orderBy,
-      include: {
-        _count: {
-          select: { entries: true },
-        },
-      },
+      // include: {
+      //   _count: {
+      //     select: { entries: true },
+      //   },
+      // },
       skip,
       take: limit,
     });
@@ -260,7 +276,7 @@ export async function getTrackers(filters?: {
       data: {
         trackers: trackers.map((tracker) => ({
           ...tracker,
-          entriesCount: tracker._count?.entries || 0,
+          entriesCount: tracker.statistics?.totalEntries || 0,
         })),
         total,
         totalPages,

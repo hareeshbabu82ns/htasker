@@ -31,7 +31,8 @@
         "eamodio.gitlens",
         "mhutchie.git-graph",
         "mhutchie.git-graph",
-        "bradlc.vscode-tailwindcss"
+        "bradlc.vscode-tailwindcss",
+        "Prisma.prisma"
       ]
     }
   },

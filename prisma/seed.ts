@@ -221,6 +221,7 @@ async function createTracker({
 async function createEntriesForTracker(tracker: any) {
   const now = new Date();
   const entries = [];
+  const entryDataBatch: any[] = []; // Collect all entry data
 
   // Generate entries for past 30 days
   for (let i = 0; i < 30; i++) {
@@ -230,7 +231,7 @@ async function createEntriesForTracker(tracker: any) {
     // Skip some days randomly to make data more realistic
     if (Math.random() > 0.7) continue;
 
-    let entryData: any = {
+    const entryData: any = {
       trackerId: tracker.id,
       date: date,
       tags: [],
@@ -254,6 +255,10 @@ async function createEntriesForTracker(tracker: any) {
         const endTime = new Date(startTime.getTime() + durationMs);
         entryData.startTime = startTime;
         entryData.endTime = endTime;
+        const durationInSeconds = Math.round(
+          (entryData.endTime.getTime() - entryData.startTime.getTime()) / 1000
+        );
+        entryData.value = durationInSeconds;
         break;
 
       case TrackerType.COUNTER:
@@ -276,17 +281,94 @@ async function createEntriesForTracker(tracker: any) {
         break;
     }
 
-    try {
-      const entry = await prisma.trackerEntry.create({
-        data: entryData,
-      });
-      entries.push(entry);
-    } catch (error) {
-      console.error(`Error creating entry for tracker ${tracker.name}:`, error);
-    }
+    entryDataBatch.push(entryData);
   }
 
-  return entries;
+  try {
+    // Use transaction to ensure both entry creation and statistics update happen atomically
+    const result = await prisma.$transaction(async (tx) => {
+      // Create all entries in a single transaction
+      const createdEntries = [];
+      for (const entryData of entryDataBatch) {
+        const entry = await tx.trackerEntry.create({
+          data: entryData,
+        });
+        createdEntries.push(entry);
+      }
+
+      // Calculate and update statistics based on these entries and any existing ones
+      const allEntries = await tx.trackerEntry.findMany({
+        where: { trackerId: tracker.id },
+      });
+
+      // Get the tracker within the transaction
+      const trackerData = await tx.tracker.findUnique({
+        where: { id: tracker.id },
+      });
+
+      if (!trackerData) {
+        throw new Error(`Tracker with id ${tracker.id} not found`);
+      }
+
+      const statistics = {
+        totalEntries: allEntries.length,
+        totalTime: 0,
+        totalValue: 0,
+        totalCustom: "",
+      };
+
+      // Calculate statistics based on tracker type
+      switch (trackerData.type) {
+        case TrackerType.TIMER:
+          statistics.totalTime = allEntries.reduce((total, entry) => {
+            if (entry.startTime && entry.endTime) {
+              const durationSeconds =
+                (entry.endTime.getTime() - entry.startTime.getTime()) / 1000;
+              return total + durationSeconds;
+            }
+            return total;
+          }, 0);
+          break;
+
+        case TrackerType.COUNTER:
+        case TrackerType.AMOUNT:
+          statistics.totalValue = allEntries.reduce((total, entry) => {
+            return total + (entry.value || 0);
+          }, 0);
+          break;
+
+        case TrackerType.OCCURRENCE:
+          // For occurrence, just the count matters
+          break;
+
+        case TrackerType.CUSTOM:
+          const average =
+            allEntries.length > 0
+              ? allEntries.reduce((sum, entry) => sum + (entry.value || 0), 0) /
+                allEntries.length
+              : 0;
+          statistics.totalValue = average;
+          statistics.totalCustom = `Average: ${average.toFixed(2)}`;
+          break;
+      }
+
+      // Update tracker with calculated statistics within the same transaction
+      await tx.tracker.update({
+        where: { id: tracker.id },
+        data: { statistics },
+      });
+
+      return createdEntries;
+    });
+
+    console.log(
+      `Created and updated statistics for ${result.length} entries in tracker ${tracker.name}`
+    );
+    return result;
+  } catch (error) {
+    console.error(`Transaction failed for tracker ${tracker.name}:`, error);
+    return [];
+  }
 }
 
 main()

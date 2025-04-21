@@ -38,6 +38,15 @@ export interface Tracker {
   createdAt: Date;
   updatedAt: Date;
   userId: string;
+  statistics?: TrackerStatistics | null; // Optional statistics
+}
+
+// TrackerStatistics Interface
+export interface TrackerStatistics {
+  totalEntries: number;
+  totalTime?: number | null; // For TIMER type
+  totalValue?: number | null; // For COUNTER and AMOUNT type
+  totalCustom?: string | null; // For CUSTOM and OCCURRENCE type
 }
 
 // TrackerEntry Interface
