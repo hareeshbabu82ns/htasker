@@ -5,6 +5,7 @@ import TrackerView from "@/components/features/trackers/TrackerView";
 import { getTracker } from "@/app/actions/trackers";
 import { Tracker } from "@/types";
 import DeleteTrackerButton from "@/components/features/trackers/DeleteTrackerButton";
+import TrackerStatsChart from "@/components/features/trackers/TrackerStatsChart";
 
 export default async function TrackerDetailPage( {
   params,
@@ -89,6 +90,9 @@ export default async function TrackerDetailPage( {
           </div>
         </div>
       </div>
+
+      {/* Tracker stats chart */}
+      <TrackerStatsChart trackerId={resolvedParams.id} trackerType={tracker.type} />
 
       {/* Tracker view component */}
       <TrackerView tracker={tracker} />

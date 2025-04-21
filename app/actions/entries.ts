@@ -27,108 +27,6 @@ const EntrySchema = z.object({
 export type CreateEntryInput = z.infer<typeof EntrySchema>;
 
 /**
- * Update tracker statistics based on tracker type and entry data
- * This is used internally by the API functions to keep statistics in sync
- */
-// async function updateTrackerStatistics(trackerId: string): Promise<void> {
-//   // Get the tracker to determine its type
-//   const tracker = await prisma.tracker.findUnique({
-//     where: { id: trackerId },
-//     select: { type: true },
-//   });
-
-//   if (!tracker) return;
-
-//   // Based on the tracker type, update the statistics accordingly
-//   switch (tracker.type) {
-//     case "TIMER":
-//       // For timer trackers: Calculate total time and count of entries
-//       const timerStats = await prisma.trackerEntry.aggregate({
-//         where: {
-//           trackerId,
-//           startTime: { not: null },
-//           endTime: { not: null },
-//         },
-//         _count: { id: true },
-//         _sum: {
-//           // Using a workaround since MongoDB doesn't support duration calculation directly
-//           // We're assuming each entry with start/end has been properly calculated
-//           value: true, // We'll store duration in 'value' field for completed timer entries
-//         },
-//       });
-
-//       await prisma.tracker.update({
-//         where: { id: trackerId },
-//         data: {
-//           statistics: {
-//             totalEntries: timerStats._count.id,
-//             totalTime: timerStats._sum.value || 0,
-//           },
-//         },
-//       });
-//       break;
-
-//     case "COUNTER":
-//     case "AMOUNT":
-//       // For counter/amount trackers: Calculate total value and count of entries
-//       const valueStats = await prisma.trackerEntry.aggregate({
-//         where: { trackerId, value: { not: null } },
-//         _count: { id: true },
-//         _sum: { value: true },
-//       });
-
-//       await prisma.tracker.update({
-//         where: { id: trackerId },
-//         data: {
-//           statistics: {
-//             totalEntries: valueStats._count.id,
-//             totalValue: valueStats._sum.value || 0,
-//           },
-//         },
-//       });
-//       break;
-
-//     case "OCCURRENCE":
-//       // For occurrence trackers: Just count entries
-//       const occurrenceCount = await prisma.trackerEntry.count({
-//         where: { trackerId },
-//       });
-
-//       await prisma.tracker.update({
-//         where: { id: trackerId },
-//         data: {
-//           statistics: {
-//             totalEntries: occurrenceCount,
-//           },
-//         },
-//       });
-//       break;
-
-//     case "CUSTOM":
-//       // For custom trackers: Just count entries and maintain any custom data
-//       const customCount = await prisma.trackerEntry.count({
-//         where: { trackerId },
-//       });
-
-//       const currentTracker = await prisma.tracker.findUnique({
-//         where: { id: trackerId },
-//         select: { statistics: true },
-//       });
-
-//       await prisma.tracker.update({
-//         where: { id: trackerId },
-//         data: {
-//           statistics: {
-//             totalEntries: customCount,
-//             totalCustom: currentTracker?.statistics?.totalCustom || "",
-//           },
-//         },
-//       });
-//       break;
-//   }
-// }
-
-/**
  * Create a new tracker entry
  */
 export async function createEntry(
@@ -757,5 +655,98 @@ export async function addCounterEntry(
   } catch (error) {
     console.error("Error adding counter entry:", error);
     return { success: false, error: "Failed to add counter entry" };
+  }
+}
+
+/**
+ * Get entry counts for today, this week, and this month for a tracker
+ */
+export async function getTrackerStats(
+  trackerId: string
+): Promise<EntryActionResponse<{ today: number; week: number; month: number }>> {
+  try {
+    // Determine tracker type
+    const tracker = await prisma.tracker.findUnique({
+      where: { id: trackerId },
+      select: { type: true },
+    });
+    if (!tracker) {
+      throw new Error("Tracker not found");
+    }
+
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const weekStart = new Date(todayStart);
+    weekStart.setDate(todayStart.getDate() - todayStart.getDay());
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    let today = 0;
+    let week = 0;
+    let month = 0;
+
+    switch (tracker.type) {
+      case "TIMER": {
+        // Sum durations for completed timer entries
+        const [t, w, m] = await Promise.all([
+          prisma.trackerEntry.aggregate({
+            where: { trackerId, startTime: { not: null }, endTime: { not: null }, date: { gte: todayStart } },
+            _sum: { value: true },
+          }),
+          prisma.trackerEntry.aggregate({
+            where: { trackerId, startTime: { not: null }, endTime: { not: null }, date: { gte: weekStart } },
+            _sum: { value: true },
+          }),
+          prisma.trackerEntry.aggregate({
+            where: { trackerId, startTime: { not: null }, endTime: { not: null }, date: { gte: monthStart } },
+            _sum: { value: true },
+          }),
+        ]);
+        today = t._sum.value ?? 0;
+        week = w._sum.value ?? 0;
+        month = m._sum.value ?? 0;
+        break;
+      }
+      case "COUNTER":
+      case "AMOUNT": {
+        // Sum values for counter/amount entries
+        const [t, w, m] = await Promise.all([
+          prisma.trackerEntry.aggregate({
+            where: { trackerId, value: { not: null }, date: { gte: todayStart } },
+            _sum: { value: true },
+          }),
+          prisma.trackerEntry.aggregate({
+            where: { trackerId, value: { not: null }, date: { gte: weekStart } },
+            _sum: { value: true },
+          }),
+          prisma.trackerEntry.aggregate({
+            where: { trackerId, value: { not: null }, date: { gte: monthStart } },
+            _sum: { value: true },
+          }),
+        ]);
+        today = t._sum.value ?? 0;
+        week = w._sum.value ?? 0;
+        month = m._sum.value ?? 0;
+        break;
+      }
+      default: {
+        // Occurrence and custom: count entries
+        const [tc, wc, mc] = await Promise.all([
+          prisma.trackerEntry.count({ where: { trackerId, date: { gte: todayStart } } }),
+          prisma.trackerEntry.count({ where: { trackerId, date: { gte: weekStart } } }),
+          prisma.trackerEntry.count({ where: { trackerId, date: { gte: monthStart } } }),
+        ]);
+        today = tc;
+        week = wc;
+        month = mc;
+      }
+    }
+
+    return {
+      success: true,
+      data: { today, week, month },
+    };
+  } catch (error) {
+    console.error("Error fetching tracker stats:", error);
+    return { success: false, error: error instanceof Error ? error.message : String(error) };
   }
 }

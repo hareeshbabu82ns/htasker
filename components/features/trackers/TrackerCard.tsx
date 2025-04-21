@@ -8,7 +8,7 @@ import { BadgeDollarSign, CalendarRange, Clock3, Columns3Cog, Hash, PauseCircle,
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { TrackerEntry } from "@/types";
-import { calculateContrastColor } from "@/lib/utils";
+import { calculateContrastColor, formatDuration } from "@/lib/utils";
 
 // Tracker Card Component
 export default function TrackerCard( { tracker, showLabel = false, showEdit = false }: { tracker: TrackerWithEntriesCount, showLabel?: boolean, showEdit?: boolean } ) {
@@ -107,22 +107,6 @@ export default function TrackerCard( { tracker, showLabel = false, showEdit = fa
       hour: '2-digit',
       minute: '2-digit'
     } ).format( date );
-  };
-
-  // Format duration for timer type
-  const formatDuration = ( seconds: number ) => {
-    if ( !seconds ) return "0s";
-
-    const hours = Math.floor( seconds / 3600 );
-    const minutes = Math.floor( ( seconds % 3600 ) / 60 );
-    const remainingSeconds = seconds % 60;
-
-    let result = "";
-    if ( hours > 0 ) result += `${hours}h `;
-    if ( minutes > 0 || hours > 0 ) result += `${minutes}m `;
-    result += `${remainingSeconds}s`;
-
-    return result.trim();
   };
 
   // Handle timer start

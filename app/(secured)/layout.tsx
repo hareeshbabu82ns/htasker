@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ThemeToggle } from "@/components/ui/theme/ThemeToggle";
 import { BadgeDollarSign, CalendarRange, Clock3, Hash } from "lucide-react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -12,6 +13,7 @@ interface AppLayoutProps {
 
 export default function AppLayout( { children }: AppLayoutProps ) {
   const [ sidebarOpen, setSidebarOpen ] = useState( false );
+  const [ queryClient ] = useState( () => new QueryClient() );
   const pathname = usePathname();
 
   // Check if a nav item is active
@@ -20,137 +22,30 @@ export default function AppLayout( { children }: AppLayoutProps ) {
   };
 
   return (
-    <div className="flex h-screen bg-background">
-      {/* Mobile sidebar backdrop */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 z-10 bg-black/50 lg:hidden"
-          onClick={() => setSidebarOpen( false )}
-        ></div>
-      )}
-
-      {/* Sidebar */}
-      <aside
-        className={`fixed inset-y-0 left-0 z-20 w-64 transform bg-background border-r border-border transition-transform duration-200 lg:static lg:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"
-          }`}
-      >
-        {/* Sidebar header */}
-        <div className="flex h-16 items-center justify-between px-4 border-b border-border">
-          <Link href="/" className="flex items-center">
-            <span className="text-xl font-bold text-primary">HTracker</span>
-          </Link>
-          <button
+    <QueryClientProvider client={queryClient}>
+      <div className="flex h-screen bg-background">
+        {/* Mobile sidebar backdrop */}
+        {sidebarOpen && (
+          <div
+            className="fixed inset-0 z-10 bg-black/50 lg:hidden"
             onClick={() => setSidebarOpen( false )}
-            className="rounded-md p-2 text-foreground hover:bg-muted lg:hidden"
-            aria-label="Close sidebar"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={1.5}
-              stroke="currentColor"
-              className="w-6 h-6"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M6 18 18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
-        </div>
+          ></div>
+        )}
 
-        {/* Sidebar navigation */}
-        <nav className="flex flex-col p-4 space-y-1">
-          <NavItem
-            href="/dashboard"
-            icon={<DashboardIcon />}
-            label="Dashboard"
-            isActive={isActive( "/dashboard" )}
-          />
-          <NavItem
-            href="/trackers"
-            icon={<TrackersIcon />}
-            label="All Trackers"
-            isActive={isActive( "/trackers" )}
-          />
-          <NavItem
-            href="/timer"
-            icon={<Clock3 />}
-            label="Timer"
-            isActive={isActive( "/timer" )}
-          />
-          <NavItem
-            href="/counter"
-            icon={<Hash />}
-            label="Counter"
-            isActive={isActive( "/counter" )}
-          />
-          <NavItem
-            href="/amount"
-            icon={<BadgeDollarSign />}
-            label="Amount"
-            isActive={isActive( "/amount" )}
-          />
-          <NavItem
-            href="/occurrence"
-            icon={<CalendarRange />}
-            label="Occurrence"
-            isActive={isActive( "/occurrence" )}
-          />
-          <NavItem
-            href="/stats"
-            icon={<StatsIcon />}
-            label="Statistics"
-            isActive={isActive( "/stats" )}
-          />
-          <NavItem
-            href="/settings"
-            icon={<SettingsIcon />}
-            label="Settings"
-            isActive={isActive( "/settings" )}
-          />
-        </nav>
-      </aside>
-
-      {/* Main content */}
-      <div className="flex flex-1 flex-col overflow-hidden">
-        {/* Header */}
-        <header className="flex h-16 items-center justify-between border-b border-border px-4 lg:px-6">
-          {/* Mobile menu button */}
-          <button
-            onClick={() => setSidebarOpen( true )}
-            className="rounded-md p-2 text-foreground hover:bg-muted lg:hidden"
-            aria-label="Open sidebar"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={1.5}
-              stroke="currentColor"
-              className="w-6 h-6"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
-              />
-            </svg>
-          </button>
-
-          {/* Page title - can be dynamic based on route */}
-          <h1 className="text-xl font-semibold text-foreground hidden md:block">
-
-          </h1>
-
-          {/* Header actions */}
-          <div className="flex items-center space-x-4">
-            <ThemeToggle />
+        {/* Sidebar */}
+        <aside
+          className={`fixed inset-y-0 left-0 z-20 w-64 transform bg-background border-r border-border transition-transform duration-200 lg:static lg:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"
+            }`}
+        >
+          {/* Sidebar header */}
+          <div className="flex h-16 items-center justify-between px-4 border-b border-border">
+            <Link href="/" className="flex items-center">
+              <span className="text-xl font-bold text-primary">HTracker</span>
+            </Link>
             <button
-              className="relative rounded-full bg-muted p-1 text-foreground"
-              aria-label="View notifications"
+              onClick={() => setSidebarOpen( false )}
+              className="rounded-md p-2 text-foreground hover:bg-muted lg:hidden"
+              aria-label="Close sidebar"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -163,36 +58,143 @@ export default function AppLayout( { children }: AppLayoutProps ) {
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0"
-                />
-              </svg>
-            </button>
-            <button
-              className="rounded-full bg-muted p-1 text-foreground"
-              aria-label="User menu"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={1.5}
-                stroke="currentColor"
-                className="w-6 h-6"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M17.982 18.725A7.488 7.488 0 0 0 12 15.75a7.488 7.488 0 0 0-5.982 2.975m11.963 0a9 9 0 1 0-11.963 0m11.963 0A8.966 8.966 0 0 1 12 21a8.966 8.966 0 0 1-5.982-2.275M15 9.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
+                  d="M6 18 18 6M6 6l12 12"
                 />
               </svg>
             </button>
           </div>
-        </header>
 
-        {/* Main content area */}
-        <main className="flex-1 overflow-auto p-4 lg:p-6">{children}</main>
+          {/* Sidebar navigation */}
+          <nav className="flex flex-col p-4 space-y-1">
+            <NavItem
+              href="/dashboard"
+              icon={<DashboardIcon />}
+              label="Dashboard"
+              isActive={isActive( "/dashboard" )}
+            />
+            <NavItem
+              href="/trackers"
+              icon={<TrackersIcon />}
+              label="All Trackers"
+              isActive={isActive( "/trackers" )}
+            />
+            <NavItem
+              href="/timer"
+              icon={<Clock3 />}
+              label="Timer"
+              isActive={isActive( "/timer" )}
+            />
+            <NavItem
+              href="/counter"
+              icon={<Hash />}
+              label="Counter"
+              isActive={isActive( "/counter" )}
+            />
+            <NavItem
+              href="/amount"
+              icon={<BadgeDollarSign />}
+              label="Amount"
+              isActive={isActive( "/amount" )}
+            />
+            <NavItem
+              href="/occurrence"
+              icon={<CalendarRange />}
+              label="Occurrence"
+              isActive={isActive( "/occurrence" )}
+            />
+            <NavItem
+              href="/stats"
+              icon={<StatsIcon />}
+              label="Statistics"
+              isActive={isActive( "/stats" )}
+            />
+            <NavItem
+              href="/settings"
+              icon={<SettingsIcon />}
+              label="Settings"
+              isActive={isActive( "/settings" )}
+            />
+          </nav>
+        </aside>
+
+        {/* Main content */}
+        <div className="flex flex-1 flex-col overflow-hidden">
+          {/* Header */}
+          <header className="flex h-16 items-center justify-between border-b border-border px-4 lg:px-6">
+            {/* Mobile menu button */}
+            <button
+              onClick={() => setSidebarOpen( true )}
+              className="rounded-md p-2 text-foreground hover:bg-muted lg:hidden"
+              aria-label="Open sidebar"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={1.5}
+                stroke="currentColor"
+                className="w-6 h-6"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
+                />
+              </svg>
+            </button>
+
+            {/* Page title - can be dynamic based on route */}
+            <h1 className="text-xl font-semibold text-foreground hidden md:block"></h1>
+
+            {/* Header actions */}
+            <div className="flex items-center space-x-4">
+              <ThemeToggle />
+              <button
+                className="relative rounded-full bg-muted p-1 text-foreground"
+                aria-label="View notifications"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={1.5}
+                  stroke="currentColor"
+                  className="w-6 h-6"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0"
+                  />
+                </svg>
+              </button>
+              <button
+                className="rounded-full bg-muted p-1 text-foreground"
+                aria-label="User menu"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={1.5}
+                  stroke="currentColor"
+                  className="w-6 h-6"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M17.982 18.725A7.488 7.488 0 0 0 12 15.75a7.488 7.488 0 0 0-5.982 2.975m11.963 0a9 9 0 1 0-11.963 0m11.963 0A8.966 8.966 0 0 1 12 21a8.966 8.966 0 0 1-5.982-2.275M15 9.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
+                  />
+                </svg>
+              </button>
+            </div>
+          </header>
+
+          {/* Main content area */}
+          <main className="flex-1 overflow-auto p-4 lg:p-6">{children}</main>
+        </div>
       </div>
-    </div>
+    </QueryClientProvider>
   );
 }
 
@@ -209,8 +211,8 @@ function NavItem( { href, icon, label, isActive }: NavItemProps ) {
     <Link
       href={href}
       className={`flex items-center px-3 py-2 rounded-md transition-colors ${isActive
-        ? "bg-primary text-white"
-        : "text-foreground hover:bg-muted hover:text-foreground"
+          ? "bg-primary text-white"
+          : "text-foreground hover:bg-muted hover:text-foreground"
         }`}
     >
       <span className="mr-3">{icon}</span>

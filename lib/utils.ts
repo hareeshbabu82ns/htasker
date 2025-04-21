@@ -5,6 +5,22 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+// Format duration for timer type
+export const formatDuration = (seconds: number) => {
+  if (!seconds) return "0s";
+
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const remainingSeconds = seconds % 60;
+
+  let result = "";
+  if (hours > 0) result += `${hours}h `;
+  if (minutes > 0 || hours > 0) result += `${minutes}m `;
+  result += `${remainingSeconds}s`;
+
+  return result.trim();
+};
+
 export function calculateContrastColor(hexColor: string): string {
   // If no color is provided, return black
   if (!hexColor || hexColor === "#000") return "#ffffff";
