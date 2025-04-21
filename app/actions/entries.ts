@@ -465,16 +465,20 @@ export async function deleteEntry(
  */
 export async function getEntriesByTracker(
   trackerId: string,
-  limit: number = 50
-): Promise<EntryActionResponse<unknown[]>> {
+  limit: number = 50,
+  page: number = 1
+): Promise<EntryActionResponse<{ entries: unknown[]; total: number }>> {
   try {
+    // Count total entries for pagination
+    const total = await prisma.trackerEntry.count({ where: { trackerId } });
+    // Fetch paginated entries
     const entries = await prisma.trackerEntry.findMany({
       where: { trackerId },
       orderBy: { date: "desc" },
+      skip: (page - 1) * limit,
       take: limit,
     });
-
-    return { success: true, data: entries };
+    return { success: true, data: { entries, total } };
   } catch (error) {
     console.error("Error getting entries:", error);
     return { success: false, error: "Failed to retrieve entries" };
@@ -663,7 +667,9 @@ export async function addCounterEntry(
  */
 export async function getTrackerStats(
   trackerId: string
-): Promise<EntryActionResponse<{ today: number; week: number; month: number }>> {
+): Promise<
+  EntryActionResponse<{ today: number; week: number; month: number }>
+> {
   try {
     // Determine tracker type
     const tracker = await prisma.tracker.findUnique({
@@ -675,7 +681,11 @@ export async function getTrackerStats(
     }
 
     const now = new Date();
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const todayStart = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate()
+    );
     const weekStart = new Date(todayStart);
     weekStart.setDate(todayStart.getDate() - todayStart.getDay());
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -689,15 +699,30 @@ export async function getTrackerStats(
         // Sum durations for completed timer entries
         const [t, w, m] = await Promise.all([
           prisma.trackerEntry.aggregate({
-            where: { trackerId, startTime: { not: null }, endTime: { not: null }, date: { gte: todayStart } },
+            where: {
+              trackerId,
+              startTime: { not: null },
+              endTime: { not: null },
+              date: { gte: todayStart },
+            },
             _sum: { value: true },
           }),
           prisma.trackerEntry.aggregate({
-            where: { trackerId, startTime: { not: null }, endTime: { not: null }, date: { gte: weekStart } },
+            where: {
+              trackerId,
+              startTime: { not: null },
+              endTime: { not: null },
+              date: { gte: weekStart },
+            },
             _sum: { value: true },
           }),
           prisma.trackerEntry.aggregate({
-            where: { trackerId, startTime: { not: null }, endTime: { not: null }, date: { gte: monthStart } },
+            where: {
+              trackerId,
+              startTime: { not: null },
+              endTime: { not: null },
+              date: { gte: monthStart },
+            },
             _sum: { value: true },
           }),
         ]);
@@ -711,15 +736,27 @@ export async function getTrackerStats(
         // Sum values for counter/amount entries
         const [t, w, m] = await Promise.all([
           prisma.trackerEntry.aggregate({
-            where: { trackerId, value: { not: null }, date: { gte: todayStart } },
+            where: {
+              trackerId,
+              value: { not: null },
+              date: { gte: todayStart },
+            },
             _sum: { value: true },
           }),
           prisma.trackerEntry.aggregate({
-            where: { trackerId, value: { not: null }, date: { gte: weekStart } },
+            where: {
+              trackerId,
+              value: { not: null },
+              date: { gte: weekStart },
+            },
             _sum: { value: true },
           }),
           prisma.trackerEntry.aggregate({
-            where: { trackerId, value: { not: null }, date: { gte: monthStart } },
+            where: {
+              trackerId,
+              value: { not: null },
+              date: { gte: monthStart },
+            },
             _sum: { value: true },
           }),
         ]);
@@ -731,9 +768,15 @@ export async function getTrackerStats(
       default: {
         // Occurrence and custom: count entries
         const [tc, wc, mc] = await Promise.all([
-          prisma.trackerEntry.count({ where: { trackerId, date: { gte: todayStart } } }),
-          prisma.trackerEntry.count({ where: { trackerId, date: { gte: weekStart } } }),
-          prisma.trackerEntry.count({ where: { trackerId, date: { gte: monthStart } } }),
+          prisma.trackerEntry.count({
+            where: { trackerId, date: { gte: todayStart } },
+          }),
+          prisma.trackerEntry.count({
+            where: { trackerId, date: { gte: weekStart } },
+          }),
+          prisma.trackerEntry.count({
+            where: { trackerId, date: { gte: monthStart } },
+          }),
         ]);
         today = tc;
         week = wc;
@@ -747,6 +790,9 @@ export async function getTrackerStats(
     };
   } catch (error) {
     console.error("Error fetching tracker stats:", error);
-    return { success: false, error: error instanceof Error ? error.message : String(error) };
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
   }
 }

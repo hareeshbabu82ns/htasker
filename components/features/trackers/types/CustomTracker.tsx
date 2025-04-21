@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Tracker, TrackerEntry } from "@/types";
 import { useTracker } from "@/hooks/useTracker";
+import EntryPagination from "../EntryPagination";
 
 interface CustomTrackerProps {
   tracker: Tracker;
@@ -19,19 +20,25 @@ export default function CustomTracker( { tracker, onUpdate }: CustomTrackerProps
   const [ tagInput, setTagInput ] = useState( "" );
   const [ entries, setEntries ] = useState<TrackerEntry[]>( [] );
   const [ isLoadingEntries, setIsLoadingEntries ] = useState( false );
+  // Pagination states
+  const [ currentPage, setCurrentPage ] = useState( 1 );
+  const [ currentLimit, setCurrentLimit ] = useState( 10 );
+  const [ totalEntries, setTotalEntries ] = useState( 0 );
 
   // Fetch entries when component mounts or after updates
   useEffect( () => {
     const loadEntries = async () => {
       setIsLoadingEntries( true );
       try {
-        const response = await fetchEntries( {
+        const { success, data, pagination } = await fetchEntries( {
           trackerId: tracker.id,
-          limit: 10
+          limit: currentLimit,
+          page: currentPage,
         } );
 
-        if ( response.success && response.data ) {
-          setEntries( response.data as TrackerEntry[] );
+        if ( success ) {
+          setEntries( data as TrackerEntry[] );
+          setTotalEntries( pagination?.total || 0 );
         }
       } catch ( error ) {
         console.error( "Failed to fetch custom entries:", error );
@@ -42,7 +49,7 @@ export default function CustomTracker( { tracker, onUpdate }: CustomTrackerProps
 
     loadEntries();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ tracker.id ] );
+  }, [ tracker.id, currentPage, currentLimit ] );
 
   // Format date for display
   const formatDate = ( date: Date ) => {
@@ -109,14 +116,15 @@ export default function CustomTracker( { tracker, onUpdate }: CustomTrackerProps
       setNote( "" );
       setCustomTags( [] );
 
-      // Refresh entries list after adding new entry
-      const result = await fetchEntries( {
+      // Refresh paginated entries after adding new entry
+      const { success: ok, data: dt, pagination: pg } = await fetchEntries( {
         trackerId: tracker.id,
-        limit: 10
+        limit: currentLimit,
+        page: currentPage,
       } );
-
-      if ( result.success ) {
-        setEntries( result.data as TrackerEntry[] );
+      if ( ok ) {
+        setEntries( dt as TrackerEntry[] );
+        setTotalEntries( pg?.total || 0 );
       }
 
       // Call the onUpdate callback if provided
@@ -229,42 +237,51 @@ export default function CustomTracker( { tracker, onUpdate }: CustomTrackerProps
             <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary"></div>
           </div>
         ) : entries.length > 0 ? (
-          <div className="space-y-3">
-            {entries.map( ( entry ) => (
-              <div key={entry.id} className="border border-border rounded-md p-3 text-sm">
-                <div className="flex justify-between items-start">
-                  <div className="flex-grow">
-                    {entry.value && (
-                      <div className="font-medium">
-                        Value: {entry.value}
+          <>
+            <div className="space-y-3">
+              {entries.map( ( entry ) => (
+                <div key={entry.id} className="border border-border rounded-md p-3 text-sm">
+                  <div className="flex justify-between items-start">
+                    <div className="flex-grow">
+                      {entry.value && (
+                        <div className="font-medium">
+                          Value: {entry.value}
+                        </div>
+                      )}
+                      {entry.note && (
+                        <div className="text-sm text-foreground/70 mt-1">
+                          {entry.note}
+                        </div>
+                      )}
+                      <div className="text-xs text-foreground/50 mt-1">
+                        {formatDate( entry.date )}
                       </div>
-                    )}
-                    {entry.note && (
-                      <div className="text-sm text-foreground/70 mt-1">
-                        {entry.note}
-                      </div>
-                    )}
-                    <div className="text-xs text-foreground/50 mt-1">
-                      {formatDate( entry.date )}
                     </div>
-                  </div>
 
-                  {entry.tags && entry.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1 ml-2">
-                      {entry.tags.map( ( tag ) => (
-                        <span
-                          key={tag}
-                          className="inline-block text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary"
-                        >
-                          {tag}
-                        </span>
-                      ) )}
-                    </div>
-                  )}
+                    {entry.tags && entry.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1 ml-2">
+                        {entry.tags.map( ( tag ) => (
+                          <span
+                            key={tag}
+                            className="inline-block text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary"
+                          >
+                            {tag}
+                          </span>
+                        ) )}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ) )}
-          </div>
+              ) )}
+            </div>
+            <EntryPagination
+              currentPage={currentPage}
+              currentLimit={currentLimit}
+              totalEntries={totalEntries}
+              onPageChange={setCurrentPage}
+              onLimitChange={( limit ) => { setCurrentLimit( limit ); setCurrentPage( 1 ); }}
+            />
+          </>
         ) : (
           <div className="text-center p-4 border border-dashed border-gray-300 dark:border-gray-700 rounded-md">
             <p className="text-foreground/60 text-sm">

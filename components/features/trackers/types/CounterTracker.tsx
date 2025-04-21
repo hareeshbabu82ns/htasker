@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Tracker, TrackerEntry } from "@/types";
 import { useTracker } from "@/hooks/useTracker";
+import EntryPagination from "../EntryPagination";
 
 interface CounterTrackerProps {
   tracker: Tracker;
@@ -12,6 +13,11 @@ interface CounterTrackerProps {
 
 export default function CounterTracker( { tracker, onUpdate }: CounterTrackerProps ) {
   const { addEntry, fetchEntries, fetchTracker } = useTracker();
+  // Pagination states
+  const [ currentPage, setCurrentPage ] = useState( 1 );
+  const [ currentLimit, setCurrentLimit ] = useState( 10 );
+  const [ totalEntries, setTotalEntries ] = useState( 0 );
+
   const [ currentValue, setCurrentValue ] = useState( 0 );
   const [ isLoading, setIsLoading ] = useState( false );
   const [ changeAmount, setChangeAmount ] = useState( 1 );
@@ -23,27 +29,23 @@ export default function CounterTracker( { tracker, onUpdate }: CounterTrackerPro
     const loadEntries = async () => {
       setIsLoadingEntries( true );
       try {
-        // First fetch all entries to calculate the total correctly
+        // Fetch current total value
         const response = await fetchTracker( tracker.id );
         if ( response.success ) {
           const trackerData = response.data as Tracker;
           setCurrentValue( trackerData.statistics?.totalValue || 0 );
         }
 
-        // Calculate the current value based on ALL entries
-        if ( response.success && response.data ) {
-          const entry = response.data as Tracker;
-          setCurrentValue( entry.statistics?.totalValue || 0 );
-        }
-
-        // Now fetch just the recent entries for display
-        const recentEntriesResponse = await fetchEntries( {
+        // Fetch paginated entries for display
+        const { success, data, pagination } = await fetchEntries( {
           trackerId: tracker.id,
-          limit: 10
+          limit: currentLimit,
+          page: currentPage
         } );
 
-        if ( recentEntriesResponse.success && recentEntriesResponse.data ) {
-          setEntries( recentEntriesResponse.data as TrackerEntry[] );
+        if ( success ) {
+          setEntries( data as TrackerEntry[] );
+          setTotalEntries( pagination?.total || 0 );
         }
       } catch ( error ) {
         console.error( "Failed to fetch counter entries:", error );
@@ -54,7 +56,7 @@ export default function CounterTracker( { tracker, onUpdate }: CounterTrackerPro
 
     loadEntries();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ tracker.id ] );
+  }, [ tracker.id, currentPage, currentLimit ] );
 
   // Format date for display
   const formatDate = ( date: Date ) => {
@@ -222,25 +224,34 @@ export default function CounterTracker( { tracker, onUpdate }: CounterTrackerPro
             <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary"></div>
           </div>
         ) : entries.length > 0 ? (
-          <div className="space-y-2">
-            {entries.map( ( entry ) => (
-              <div key={entry.id} className="border border-border rounded-md p-3 text-sm">
-                <div className="flex justify-between items-center">
-                  <div className="font-medium">
-                    {formatDate( entry.date )}
+          <>
+            <div className="space-y-2">
+              {entries.map( ( entry ) => (
+                <div key={entry.id} className="border border-border rounded-md p-3 text-sm">
+                  <div className="flex justify-between items-center">
+                    <div className="font-medium">
+                      {formatDate( entry.date )}
+                    </div>
+                    <div className={`${( entry.value || 0 ) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                      {( entry.value || 0 ) > 0 ? '+' : ''}{entry.value}
+                    </div>
                   </div>
-                  <div className={`${( entry.value || 0 ) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                    {( entry.value || 0 ) > 0 ? '+' : ''}{entry.value}
-                  </div>
+                  {entry.note && (
+                    <div className="text-xs text-foreground/60 mt-1 italic">
+                      {entry.note}
+                    </div>
+                  )}
                 </div>
-                {entry.note && (
-                  <div className="text-xs text-foreground/60 mt-1 italic">
-                    {entry.note}
-                  </div>
-                )}
-              </div>
-            ) )}
-          </div>
+              ) )}
+            </div>
+            <EntryPagination
+              currentPage={currentPage}
+              currentLimit={currentLimit}
+              totalEntries={totalEntries}
+              onPageChange={setCurrentPage}
+              onLimitChange={( limit ) => { setCurrentLimit( limit ); setCurrentPage( 1 ); }}
+            />
+          </>
         ) : (
           <div className="text-center p-4 border border-dashed border-gray-300 dark:border-gray-700 rounded-md">
             <p className="text-foreground/60 text-sm">

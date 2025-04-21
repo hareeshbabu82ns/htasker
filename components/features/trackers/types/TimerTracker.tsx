@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Tracker, TrackerEntry } from "@/types";
 import { useTracker } from "@/hooks/useTracker";
+import EntryPagination from "../EntryPagination";
 
 interface TimerTrackerProps {
   tracker: Tracker;
@@ -20,6 +21,10 @@ export default function TimerTracker( { tracker, onUpdate }: TimerTrackerProps )
   const [ isLoading, setIsLoading ] = useState( false );
   const [ entries, setEntries ] = useState<TrackerEntry[]>( [] );
   const [ isLoadingEntries, setIsLoadingEntries ] = useState( false );
+  // Pagination states for history
+  const [ currentPage, setCurrentPage ] = useState( 1 );
+  const [ currentLimit, setCurrentLimit ] = useState( 10 );
+  const [ totalEntries, setTotalEntries ] = useState( 0 );
 
   // Calculate total duration from entries
   const calculateTotalDuration = async (): Promise<number> => {
@@ -36,18 +41,22 @@ export default function TimerTracker( { tracker, onUpdate }: TimerTrackerProps )
     }
   };
 
-  // Fetch entries when the component mounts or when a new entry is added
+  // Fetch entries when the component mounts or when dependencies change
   useEffect( () => {
     const loadEntries = async () => {
       setIsLoadingEntries( true );
       try {
-        const response = await fetchEntries( {
+        // Fetch entries with pagination
+        const { success, data, pagination } = await fetchEntries( {
           trackerId: tracker.id,
-          limit: 10
+          limit: currentLimit,
+          page: currentPage,
         } );
 
-        if ( response.success ) {
-          const entriesData = response.data as TrackerEntry[];
+        if ( success ) {
+          const entriesData = data as TrackerEntry[];
+          setTotalEntries( pagination?.total || 0 );
+
           // Filter out entries where startTime equals endTime (in-progress entries)
           const completedEntries = entriesData.filter( entry =>
             entry.startTime && entry.endTime && new Date( entry.startTime ).getTime() !== new Date( entry.endTime ).getTime()
@@ -79,7 +88,7 @@ export default function TimerTracker( { tracker, onUpdate }: TimerTrackerProps )
 
     loadEntries();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ tracker.id ] );
+  }, [ tracker.id, currentLimit, currentPage ] );
 
   // Update the timer every second when running
   useEffect( () => {
@@ -263,30 +272,39 @@ export default function TimerTracker( { tracker, onUpdate }: TimerTrackerProps )
             <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary"></div>
           </div>
         ) : entries.length > 0 ? (
-          <div className="space-y-3">
-            {entries.map( ( entry ) => (
-              entry.startTime && entry.endTime ? (
-                <div key={entry.id} className="border border-border rounded-md p-3 text-sm">
-                  <div className="flex justify-between items-center">
-                    <div className="font-medium">
-                      {formatDate( entry.date )}
+          <>
+            <div className="space-y-3">
+              {entries.map( ( entry ) => (
+                entry.startTime && entry.endTime ? (
+                  <div key={entry.id} className="border border-border rounded-md p-3 text-sm">
+                    <div className="flex justify-between items-center">
+                      <div className="font-medium">
+                        {formatDate( entry.date )}
+                      </div>
+                      <div className="text-foreground/70">
+                        {formatTime( calculateDuration( entry.startTime, entry.endTime ) )}
+                      </div>
                     </div>
-                    <div className="text-foreground/70">
-                      {formatTime( calculateDuration( entry.startTime, entry.endTime ) )}
+                    <div className="text-xs text-foreground/60 mt-1 flex justify-between">
+                      <div>
+                        {new Date( entry.startTime ).toLocaleTimeString()} - {new Date( entry.endTime ).toLocaleTimeString()}
+                      </div>
+                      {entry.note && (
+                        <div className="italic">{entry.note}</div>
+                      )}
                     </div>
                   </div>
-                  <div className="text-xs text-foreground/60 mt-1 flex justify-between">
-                    <div>
-                      {new Date( entry.startTime ).toLocaleTimeString()} - {new Date( entry.endTime ).toLocaleTimeString()}
-                    </div>
-                    {entry.note && (
-                      <div className="italic">{entry.note}</div>
-                    )}
-                  </div>
-                </div>
-              ) : null
-            ) )}
-          </div>
+                ) : null
+              ) )}
+            </div>
+            <EntryPagination
+              currentPage={currentPage}
+              currentLimit={currentLimit}
+              totalEntries={totalEntries}
+              onPageChange={setCurrentPage}
+              onLimitChange={( limit ) => { setCurrentLimit( limit ); setCurrentPage( 1 ); }}
+            />
+          </>
         ) : (
           <div className="text-center p-4 border border-dashed border-gray-300 dark:border-gray-700 rounded-md">
             <p className="text-foreground/60 text-sm">

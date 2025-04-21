@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Tracker, TrackerEntry } from "@/types";
 import { useTracker } from "@/hooks/useTracker";
+import EntryPagination from "../EntryPagination";
 
 interface AmountTrackerProps {
   tracker: Tracker;
@@ -12,6 +13,11 @@ interface AmountTrackerProps {
 
 export default function AmountTracker( { tracker, onUpdate }: AmountTrackerProps ) {
   const { addEntry, fetchEntries, fetchTracker, isLoading: isHookLoading } = useTracker();
+  // Pagination states
+  const [ currentPage, setCurrentPage ] = useState( 1 );
+  const [ currentLimit, setCurrentLimit ] = useState( 10 );
+  const [ totalEntries, setTotalEntries ] = useState( 0 );
+
   const [ amount, setAmount ] = useState( "" );
   const [ currency, setCurrency ] = useState( "USD" );
   const [ note, setNote ] = useState( "" );
@@ -26,19 +32,21 @@ export default function AmountTracker( { tracker, onUpdate }: AmountTrackerProps
     loadEntries();
     calculateTotalFromAllEntries();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ tracker.id ] );
+  }, [ tracker.id, currentPage, currentLimit ] );
 
   // Function to load entries for display in UI
   const loadEntries = async () => {
     setIsLoadingEntries( true );
     try {
-      const result = await fetchEntries( {
+      const { success, data, pagination } = await fetchEntries( {
         trackerId: tracker.id,
-        limit: 10, // Limit to most recent entries for display
+        limit: currentLimit,
+        page: currentPage,
       } );
 
-      if ( result.success ) {
-        setDisplayedEntries( result.data );
+      if ( success ) {
+        setDisplayedEntries( data as TrackerEntry[] );
+        setTotalEntries( pagination?.total || 0 );
       }
     } catch ( error ) {
       console.error( "Failed to fetch display entries:", error );
@@ -217,36 +225,45 @@ export default function AmountTracker( { tracker, onUpdate }: AmountTrackerProps
             <p className="text-foreground/60">Loading entries...</p>
           </div>
         ) : displayedEntries.length > 0 ? (
-          <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
-            {displayedEntries.map( ( entry ) => (
-              <div
-                key={entry.id}
-                className="flex justify-between items-center p-3 border border-gray-200 dark:border-gray-800 rounded-md bg-background/50"
-              >
-                <div>
-                  <div className="font-medium">
-                    {formatCurrency( entry.value || 0 )}
+          <>
+            <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
+              {displayedEntries.map( ( entry ) => (
+                <div
+                  key={entry.id}
+                  className="flex justify-between items-center p-3 border border-gray-200 dark:border-gray-800 rounded-md bg-background/50"
+                >
+                  <div>
+                    <div className="font-medium">
+                      {formatCurrency( entry.value || 0 )}
+                    </div>
+                    {entry.note && (
+                      <div className="text-sm text-foreground/70">{entry.note}</div>
+                    )}
+                    <div className="text-xs text-foreground/50">
+                      {formatDate( entry.date )}
+                    </div>
                   </div>
-                  {entry.note && (
-                    <div className="text-sm text-foreground/70">{entry.note}</div>
-                  )}
-                  <div className="text-xs text-foreground/50">
-                    {formatDate( entry.date )}
+                  <div>
+                    {entry.tags?.map( ( tag ) => (
+                      <span
+                        key={tag}
+                        className="inline-block text-xs px-2 py-1 rounded-full bg-primary/10 text-primary"
+                      >
+                        {tag}
+                      </span>
+                    ) )}
                   </div>
                 </div>
-                <div>
-                  {entry.tags?.map( ( tag ) => (
-                    <span
-                      key={tag}
-                      className="inline-block text-xs px-2 py-1 rounded-full bg-primary/10 text-primary"
-                    >
-                      {tag}
-                    </span>
-                  ) )}
-                </div>
-              </div>
-            ) )}
-          </div>
+              ) )}
+            </div>
+            <EntryPagination
+              currentPage={currentPage}
+              currentLimit={currentLimit}
+              totalEntries={totalEntries}
+              onPageChange={setCurrentPage}
+              onLimitChange={( limit ) => { setCurrentLimit( limit ); setCurrentPage( 1 ); }}
+            />
+          </>
         ) : (
           <div className="text-center p-4 border border-dashed border-gray-300 dark:border-gray-700 rounded-md">
             <p className="text-foreground/60 text-sm">

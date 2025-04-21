@@ -313,18 +313,28 @@ export function useTracker() {
     setError(null);
 
     try {
-      const response = await getEntriesByTracker(trackerId, limit || 50);
+      // Fetch entries with pagination
+      const response = await getEntriesByTracker(
+        trackerId,
+        limit || 50,
+        page || 1
+      );
 
       if (!response.success) {
         setError(response.error || "Failed to fetch entries");
         return { success: false };
       }
 
+      // Destructure paginated response
+      const { entries, total } = response.data as {
+        entries: unknown[];
+        total: number;
+      };
       return {
         success: true,
-        data: response.data,
+        data: entries,
         pagination: {
-          total: response.data.length,
+          total,
           page: page || 1,
           limit: limit || 50,
         },
