@@ -55,8 +55,9 @@ export default function TimerTracker( { tracker, onUpdate }: TimerTrackerProps )
           setEntries( completedEntries );
 
           // Check if there's an in-progress entry
-          const inProgressEntry = entriesData.find( entry =>
-            entry.startTime && entry.endTime && new Date( entry.startTime ).getTime() === new Date( entry.endTime ).getTime()
+          console.log( "Entries Data:", entriesData );
+          const inProgressEntry = entriesData.find( entry => !entry.endTime ||
+            ( entry.startTime && entry.endTime && new Date( entry.startTime ).getTime() === new Date( entry.endTime ).getTime() )
           );
 
           if ( inProgressEntry ) {
@@ -179,7 +180,7 @@ export default function TimerTracker( { tracker, onUpdate }: TimerTrackerProps )
         // Refresh entries
         const response = await fetchEntries( {
           trackerId: tracker.id,
-          limit: 5
+          limit: 10
         } );
 
         if ( response.success ) {

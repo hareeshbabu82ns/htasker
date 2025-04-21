@@ -15,8 +15,8 @@
   --primary-foreground: var(--color-slate-50);
   --primary-hover: var(--color-indigo-600);
   --primary-active: var(--color-indigo-700);
-  --secondary: oklch(0.968 0.007 247.896);
-  --secondary-foreground: oklch(0.208 0.042 265.755);
+  --secondary: var(--color-lime-700);
+  --secondary-foreground: var(--color-lime-50);
   --muted: var(--color-slate-200);
   --muted-foreground: oklch(0.554 0.046 257.417);
   --accent: oklch(0.968 0.007 247.896);
@@ -59,8 +59,8 @@
   --primary-foreground: var(--color-slate-50);
   --primary-hover: var(--color-indigo-300);
   --primary-active: var(--color-indigo-200);
-  --secondary: var(--color-indigo-500);
-  --secondary-foreground: var(--color-slate-50);
+  --secondary: var(--color-lime-500);
+  --secondary-foreground: var(--color-lime-50);
   --muted: var(--color-slate-800);
   --muted-foreground: var(--color-slate-300);
   --accent: var(--color-indigo-400);
