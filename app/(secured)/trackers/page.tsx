@@ -4,20 +4,14 @@ import { getTrackers, TrackerWithEntriesCount } from "@/app/actions/trackers";
 import { TrackerStatus, TrackerType } from "@/types";
 import TrackerFilters from "@/components/features/trackers/TrackerFilters";
 import TrackerCard from "@/components/features/trackers/TrackerCard";
+import Pagination from "@/components/features/trackers/Pagination";
 
 const PAGE_LIMIT_DEFAULT = 10;
-
-// Type definition for pagination component props
-interface PaginationProps {
-  currentPage: number;
-  totalPages: number;
-  getPaginationUrl: ( page: number ) => string;
-}
 
 export default async function TrackersPage( {
   searchParams,
 }: {
-  searchParams: { [ key: string ]: string | string[] | undefined | Promise<unknown> };
+  searchParams: Promise<{ [ key: string ]: string | string[] | undefined | unknown }>;
 } ) {
   const resolvedSearchParams = await searchParams;
 
@@ -72,13 +66,7 @@ export default async function TrackersPage( {
   };
 
   const baseParams = createBaseUrl();
-
-  // Helper function to generate pagination URLs
-  const getPaginationUrl = ( pageNumber: number ) => {
-    const params = new URLSearchParams( baseParams );
-    params.set( "page", pageNumber.toString() );
-    return `/trackers?${params.toString()}`;
-  };
+  const baseUrl = `/trackers?${baseParams.toString()}`;
 
   return (
     <div className="space-y-6">
@@ -103,33 +91,39 @@ export default async function TrackersPage( {
           <>
             <div className="flex items-center justify-between mb-4">
               <div className="text-sm text-muted-foreground">
-                Showing {page * PAGE_LIMIT_DEFAULT - PAGE_LIMIT_DEFAULT + 1} to {Math.min( page * PAGE_LIMIT_DEFAULT, total )} of {total} trackers
+                Showing {page * limit - limit + 1} to {Math.min( page * limit, total )} of {total} trackers
               </div>
               {/* Pagination controls */}
+              <div className="flex items-center gap-4">
+                {totalPages > 1 && (
+                  <Pagination
+                    currentPage={page}
+                    totalPages={totalPages}
+                    currentLimit={limit}
+                    baseUrl={baseUrl}
+                  />
+                )}
+              </div>
+            </div>
+
+            {trackers.map( ( tracker ) => (
+              <TrackerCard key={tracker.id} tracker={tracker} showEdit />
+            ) )}
+
+            {/* Bottom pagination controls */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="text-sm text-muted-foreground">
+                Showing {page * limit - limit + 1} to {Math.min( page * limit, total )} of {total} trackers
+              </div>
               {totalPages > 1 && (
                 <Pagination
                   currentPage={page}
                   totalPages={totalPages}
-                  getPaginationUrl={getPaginationUrl}
+                  currentLimit={limit}
+                  baseUrl={baseUrl}
                 />
               )}
             </div>
-
-            {trackers.map( ( tracker ) => (
-              // <TrackerListItem key={tracker.id} tracker={tracker} />
-              <TrackerCard
-                key={tracker.id}
-                tracker={tracker} showEdit />
-            ) )}
-
-            {/* Pagination controls */}
-            {totalPages > 1 && (
-              <Pagination
-                currentPage={page}
-                totalPages={totalPages}
-                getPaginationUrl={getPaginationUrl}
-              />
-            )}
           </>
         ) : (
           <div className="bg-background border border-border rounded-lg p-6 text-center">
@@ -142,143 +136,6 @@ export default async function TrackersPage( {
           </div>
         )}
       </div>
-    </div>
-  );
-}
-
-// Pagination Component
-function Pagination( { currentPage, totalPages, getPaginationUrl }: PaginationProps ) {
-  // Create an array of page numbers to display
-  const getPageNumbers = () => {
-    const pages = [];
-    const maxPagesToShow = 5;
-
-    if ( totalPages <= maxPagesToShow ) {
-      // If total pages is less than max to show, display all pages
-      for ( let i = 1; i <= totalPages; i++ ) {
-        pages.push( i );
-      }
-    } else {
-      // Always include first page
-      pages.push( 1 );
-
-      // Calculate start and end of page range
-      let start = Math.max( 2, currentPage - 1 );
-      let end = Math.min( totalPages - 1, currentPage + 1 );
-
-      // Adjust if at the beginning or end
-      if ( currentPage <= 2 ) {
-        end = Math.min( totalPages - 1, 4 );
-      } else if ( currentPage >= totalPages - 1 ) {
-        start = Math.max( 2, totalPages - 3 );
-      }
-
-      // Add ellipsis if needed before middle pages
-      if ( start > 2 ) {
-        pages.push( -1 ); // Use -1 to represent ellipsis
-      }
-
-      // Add middle pages
-      for ( let i = start; i <= end; i++ ) {
-        pages.push( i );
-      }
-
-      // Add ellipsis if needed after middle pages
-      if ( end < totalPages - 1 ) {
-        pages.push( -2 ); // Use -2 to represent ellipsis
-      }
-
-      // Always include last page
-      pages.push( totalPages );
-    }
-
-    return pages;
-  };
-
-  const pageNumbers = getPageNumbers();
-
-  return (
-    <div className="flex justify-end my-6">
-      <nav className="flex items-center gap-1" aria-label="Pagination">
-        {/* Previous page button */}
-        <Link
-          href={currentPage > 1 ? getPaginationUrl( currentPage - 1 ) : "#"}
-          className={`px-2 py-2 text-sm font-medium rounded-md ${currentPage === 1
-            ? "text-gray-400 cursor-not-allowed"
-            : "text-primary hover:bg-primary/5"
-            }`}
-          aria-disabled={currentPage === 1}
-          tabIndex={currentPage === 1 ? -1 : 0}
-        >
-          <span className="sr-only">Previous</span>
-          <svg
-            className="h-4 w-4"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M15 19l-7-7 7-7"
-            />
-          </svg>
-        </Link>
-
-        {/* Page numbers */}
-        {pageNumbers.map( ( pageNum, i ) => {
-          // Handle ellipsis
-          if ( pageNum < 0 ) {
-            return (
-              <span key={`ellipsis-${i}`} className="px-3 py-2">
-                ...
-              </span>
-            );
-          }
-
-          // Handle regular page numbers
-          return (
-            <Link
-              key={pageNum}
-              href={getPaginationUrl( pageNum )}
-              className={`px-3 py-2 text-sm font-medium rounded-md ${currentPage === pageNum
-                ? "bg-primary text-primary-foreground"
-                : "text-foreground hover:bg-primary/5"
-                }`}
-              aria-current={currentPage === pageNum ? "page" : undefined}
-            >
-              {pageNum}
-            </Link>
-          );
-        } )}
-
-        {/* Next page button */}
-        <Link
-          href={currentPage < totalPages ? getPaginationUrl( currentPage + 1 ) : "#"}
-          className={`px-2 py-2 text-sm font-medium rounded-md ${currentPage === totalPages
-            ? "text-gray-400 cursor-not-allowed"
-            : "text-primary hover:bg-primary/5"
-            }`}
-          aria-disabled={currentPage === totalPages}
-          tabIndex={currentPage === totalPages ? -1 : 0}
-        >
-          <span className="sr-only">Next</span>
-          <svg
-            className="h-4 w-4"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M9 5l7 7-7 7"
-            />
-          </svg>
-        </Link>
-      </nav>
     </div>
   );
 }
