@@ -16,16 +16,32 @@ datasource db {
 
 // User model for authentication
 model User {
-  id            String    @id @default(auto()) @map("_id") @db.ObjectId
+  id            String     @id @default(auto()) @map("_id") @db.ObjectId
   name          String?
-  email         String    @unique
+  email         String     @unique
   emailVerified DateTime?
   image         String?
   password      String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
   accounts      Account[]
   trackers      Tracker[]
+  apiTokens     ApiToken[]
+}
+
+// API token model for programmatic access
+model ApiToken {
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String    @db.ObjectId
+  name        String
+  tokenHash   String    @unique
+  tokenPrefix String
+  lastUsedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  expiresAt   DateTime?
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 // Account model for NextAuth OAuth providers

@@ -9,7 +9,7 @@ import { ReactNode, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ThemeToggle } from "@/components/ui/theme/ThemeToggle";
-import { BadgeDollarSign, CalendarRange, Clock3, Hash, Download } from "lucide-react";
+import { BadgeDollarSign, CalendarRange, Clock3, Hash, Download, KeyRound } from "lucide-react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 interface AppLayoutProps {
@@ -128,6 +128,12 @@ export default function AppLayout({ children }: AppLayoutProps) {
               icon={<Download className="h-5 w-5" />}
               label="Export Data"
               isActive={isActive("/settings/export")}
+            />
+            <NavItem
+              href="/settings/api-tokens"
+              icon={<KeyRound className="h-5 w-5" />}
+              label="API Tokens"
+              isActive={isActive("/settings/api-tokens")}
             />
           </nav>
         </aside>
