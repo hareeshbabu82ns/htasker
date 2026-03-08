@@ -82,12 +82,14 @@ export default function TrackerCard({
     setCounterValue(tracker.statistics?.totalValue ?? 0);
   }, [tracker.statistics?.totalValue, tracker.id]);
 
-  // Check for active timer on component mount
+  // Check for active timer on mount and whenever the tracker is updated externally
+  // (e.g. timer started from the detail page updates tracker.updatedAt)
   useEffect(() => {
     if (tracker.type === TrackerType.TIMER && tracker.status !== TrackerStatus.ARCHIVED) {
       fetchActiveTimer();
     }
-  }, [tracker.id, tracker.type, tracker.status]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tracker.id, tracker.type, tracker.status, new Date(tracker.updatedAt).getTime()]);
 
   // Update timer display every second when running
   useEffect(() => {
@@ -106,9 +108,11 @@ export default function TrackerCard({
   const fetchActiveTimer = async () => {
     try {
       const response = await getEntriesByTracker(tracker.id, 5);
-      if (response.success && Array.isArray(response.data)) {
-        const entries = response.data as TrackerEntry[];
-        // Find entry with startTime but no endTime (or where they are the same - in progress)
+      if (response.success && response.data) {
+        const data = response.data as { entries: TrackerEntry[]; total: number };
+        const entries = data.entries ?? [];
+        // Find entry with startTime but no endTime (running), or where startTime === endTime
+        // (in-progress marker used by some mutation paths)
         const activeEntry = entries.find(
           (entry) =>
             entry.startTime &&
@@ -127,6 +131,11 @@ export default function TrackerCard({
             (now.getTime() - new Date(activeEntry.startTime!).getTime()) / 1000
           );
           setElapsedTime(diff);
+        } else {
+          // No active entry found — ensure local state reflects stopped state
+          setIsRunning(false);
+          setActiveEntryId(null);
+          setStartTime(null);
         }
       }
     } catch (error) {
