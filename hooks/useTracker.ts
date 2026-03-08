@@ -1,3 +1,7 @@
+/**
+ * @deprecated Use the React Query hooks in hooks/useTrackerQuery.ts instead.
+ * This hook will be removed in a future refactor.
+ */
 "use client";
 
 import {

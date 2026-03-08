@@ -1,7 +1,19 @@
 import TrackerForm from "@/components/features/trackers/TrackerForm";
 import Link from "next/link";
+import { TrackerType } from "@/types";
 
-export default function NewTrackerPage() {
+const VALID_TRACKER_TYPES = new Set<string>( Object.values( TrackerType ) );
+
+export default async function NewTrackerPage( {
+  searchParams,
+}: {
+  searchParams: Promise<{ [ key: string ]: string | string[] | undefined }>;
+} ) {
+  const resolvedParams = await searchParams;
+  const rawType = typeof resolvedParams.type === "string" ? resolvedParams.type.toUpperCase() : undefined;
+  const preselectedType: TrackerType | undefined =
+    rawType && VALID_TRACKER_TYPES.has( rawType ) ? ( rawType as TrackerType ) : undefined;
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -59,7 +71,7 @@ export default function NewTrackerPage() {
 
       {/* Tracker form */}
       <div className="bg-background border border-border p-6 rounded-lg">
-        <TrackerForm />
+        <TrackerForm initialData={preselectedType ? { type: preselectedType } : undefined} />
       </div>
     </div>
   );

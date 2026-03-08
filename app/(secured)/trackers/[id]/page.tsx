@@ -5,7 +5,9 @@ import TrackerView from "@/components/features/trackers/TrackerView";
 import { getTracker } from "@/app/actions/trackers";
 import { Tracker } from "@/types";
 import DeleteTrackerButton from "@/components/features/trackers/DeleteTrackerButton";
-import TrackerStatsChart from "@/components/features/trackers/TrackerStatsChart";
+import GoalForm from "@/components/features/trackers/GoalForm";
+import GoalProgress from "@/components/features/trackers/GoalProgress";
+import TrackerDetailCharts from "@/components/features/trackers/TrackerDetailCharts";
 
 export default async function TrackerDetailPage( {
   params,
@@ -91,8 +93,18 @@ export default async function TrackerDetailPage( {
         </div>
       </div>
 
-      {/* Tracker stats chart */}
-      <TrackerStatsChart trackerId={resolvedParams.id} trackerType={tracker.type} />
+      {/* Tracker stats chart, trend chart, and calendar heatmap */}
+      <TrackerDetailCharts
+        trackerId={resolvedParams.id}
+        trackerType={tracker.type}
+        tracker={tracker}
+      />
+
+      {/* Goal setting and progress */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <GoalForm tracker={tracker} />
+        {tracker.goalEnabled && <GoalProgress tracker={tracker} />}
+      </div>
 
       {/* Tracker view component */}
       <TrackerView tracker={tracker} />

@@ -21,6 +21,16 @@ export const formatDuration = (seconds: number) => {
   return result.trim();
 };
 
+export function hapticFeedback(duration: number = 15): void {
+  try {
+    if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+      navigator.vibrate(duration)
+    }
+  } catch {
+    // Silently ignore — unsupported environments
+  }
+}
+
 export function calculateContrastColor(hexColor: string): string {
   // If no color is provided, return black
   if (!hexColor || hexColor === "#000") return "#ffffff";

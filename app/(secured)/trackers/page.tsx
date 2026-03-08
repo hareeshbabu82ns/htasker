@@ -1,9 +1,10 @@
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { BarChart2 } from "lucide-react";
 import { getTrackers, TrackerWithEntriesCount } from "@/app/actions/trackers";
 import { TrackerStatus, TrackerType } from "@/types";
 import TrackerFilters from "@/components/features/trackers/TrackerFilters";
-import TrackerCard from "@/components/features/trackers/TrackerCard";
+import TrackerListClient from "@/components/features/trackers/TrackerListClient";
 import Pagination from "@/components/features/trackers/Pagination";
 
 const PAGE_LIMIT_DEFAULT = 10;
@@ -72,9 +73,19 @@ export default async function TrackersPage( {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <h1 className="text-2xl font-semibold">All Trackers</h1>
-        <Link href="/trackers/new" passHref>
-          <Button>Create New Tracker</Button>
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link href="/trackers/compare" passHref>
+            <Button variant="outline" asChild>
+              <span className="flex items-center gap-1.5">
+                <BarChart2 className="w-4 h-4" />
+                Compare
+              </span>
+            </Button>
+          </Link>
+          <Link href="/trackers/new" passHref>
+            <Button>Create New Tracker</Button>
+          </Link>
+        </div>
       </div>
 
       {/* Filter and search controls */}
@@ -106,9 +117,7 @@ export default async function TrackersPage( {
               </div>
             </div>
 
-            {trackers.map( ( tracker ) => (
-              <TrackerCard key={tracker.id} tracker={tracker} showEdit />
-            ) )}
+            <TrackerListClient trackers={trackers} />
 
             {/* Bottom pagination controls */}
             <div className="flex items-center justify-between mb-4">

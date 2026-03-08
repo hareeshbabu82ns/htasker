@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { getTrackers, TrackerWithEntriesCount } from '@/app/actions/trackers';
 import { RefreshCw } from 'lucide-react';
 import TrackerCard from '@/components/features/trackers/TrackerCard';
@@ -112,8 +113,12 @@ export default function RecentTrackers() {
 
       <div className="space-y-4">
         {isLoading ? (
-          // Optional: Add Skeleton loaders here
-          <p>Loading trackers...</p>
+          // Skeleton loaders
+          <div className="space-y-4">
+            {[...Array(3)].map((_, i) => (
+              <Skeleton key={i} className="h-32 w-full rounded-lg" />
+            ))}
+          </div>
         ) : displayTrackers.length > 0 ? (
           displayTrackers.map( ( tracker ) => (
             <TrackerCard key={tracker.id} tracker={tracker} />

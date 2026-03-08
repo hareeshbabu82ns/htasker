@@ -1,10 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Tracker, TrackerEntry } from "@/types";
-import { useTracker } from "@/hooks/useTracker";
+import { Tracker, TrackerEntry, TrackerType } from "@/types";
+import { useEntriesQuery, useAddEntryMutation } from "@/hooks/useTrackerQuery";
+import { trackerKeys } from "@/hooks/queries/trackerQueries";
+import { getOccurrenceStreak } from "@/app/actions/entries";
+import { Flame } from "lucide-react";
 import EntryPagination from "../EntryPagination";
+import EditEntryModal from "../EditEntryModal";
 
 interface OccurrenceTrackerProps {
   tracker: Tracker;
@@ -12,117 +17,75 @@ interface OccurrenceTrackerProps {
 }
 
 export default function OccurrenceTracker( { tracker, onUpdate }: OccurrenceTrackerProps ) {
-  const { addEntry, fetchEntries } = useTracker();
-  // Pagination states
+  const queryClient = useQueryClient();
+
+  const { data: streakData } = useQuery( {
+    queryKey: [ "occurrenceStreak", tracker.id ],
+    queryFn: async () => {
+      const res = await getOccurrenceStreak( tracker.id );
+      if ( !res.success ) throw new Error( res.error );
+      return res.data;
+    },
+  } );
+
   const [ currentPage, setCurrentPage ] = useState( 1 );
   const [ currentLimit, setCurrentLimit ] = useState( 10 );
-  const [ totalEntries, setTotalEntries ] = useState( 0 );
-
-  const [ isLoading, setIsLoading ] = useState( false );
   const [ note, setNote ] = useState( "" );
-  const [ entries, setEntries ] = useState<TrackerEntry[]>( [] );
-  const [ isLoadingEntries, setIsLoadingEntries ] = useState( false );
 
   const today = new Date();
-  const formattedToday = today.toISOString().split( 'T' )[ 0 ];
+  const formattedToday = today.toISOString().split( "T" )[ 0 ];
   const [ selectedDate, setSelectedDate ] = useState( formattedToday );
 
-  // Fetch entries when component mounts or after updates
-  useEffect( () => {
-    const loadEntries = async () => {
-      setIsLoadingEntries( true );
-      try {
-        const { success, data, pagination } = await fetchEntries( {
-          trackerId: tracker.id,
-          limit: currentLimit,
-          page: currentPage
-        } );
+  const entriesQuery = useEntriesQuery( tracker.id, currentPage, currentLimit );
+  const addEntryMutation = useAddEntryMutation( tracker.id );
 
-        if ( success ) {
-          setEntries( data as TrackerEntry[] );
-          setTotalEntries( pagination?.total || 0 );
+  const entries = ( entriesQuery.data?.entries ?? [] ) as TrackerEntry[];
+  const totalEntries = entriesQuery.data?.total ?? 0;
+  const isLoadingEntries = entriesQuery.isLoading;
 
-          // Calculate days since last occurrence
-          if ( ( data as TrackerEntry[] ).length > 0 ) {
-            const lastEntry = ( data as TrackerEntry[] )[ 0 ];
-            const lastDate = new Date( lastEntry.date );
-            const diffTime = Math.abs( today.getTime() - lastDate.getTime() );
-            const diffDays = Math.floor( diffTime / ( 1000 * 60 * 60 * 24 ) );
-            setDaysSinceLastOccurrence( diffDays );
-          }
-        }
-      } catch ( error ) {
-        console.error( "Failed to fetch occurrence entries:", error );
-      } finally {
-        setIsLoadingEntries( false );
-      }
-    };
+  // Days since last occurrence (derived from latest entry)
+  const daysSinceLastOccurrence = (() => {
+    if ( entries.length === 0 ) return 0;
+    const lastDate = new Date( entries[ 0 ].date );
+    const diffTime = Math.abs( today.getTime() - lastDate.getTime() );
+    return Math.floor( diffTime / ( 1000 * 60 * 60 * 24 ) );
+  })();
 
-    loadEntries();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ tracker.id, currentPage, currentLimit ] );
+  const handleEntryUpdated = () => {
+    void queryClient.invalidateQueries( { queryKey: trackerKeys.detail( tracker.id ) } );
+    void queryClient.invalidateQueries( { queryKey: [ "entries", tracker.id ] } );
+    void queryClient.invalidateQueries( { queryKey: [ "occurrenceStreak", tracker.id ] } );
+  };
 
-  // Calculate days since last occurrence
-  const [ daysSinceLastOccurrence, setDaysSinceLastOccurrence ] = useState( 0 );
-
-  // Format date for display
   const formatDate = ( date: Date ) => {
     return new Intl.DateTimeFormat( "en-US", {
       weekday: "short",
       month: "short",
       day: "numeric",
-      year: "numeric"
+      year: "numeric",
     } ).format( new Date( date ) );
   };
 
-  // Handle recording an occurrence
-  const handleLogOccurrence = async () => {
-    setIsLoading( true );
-
-    try {
-      const formData = new FormData();
-      formData.append( "trackerId", tracker.id );
-      formData.append( "date", new Date( selectedDate ).toISOString() );
-
-      if ( note.trim() ) {
-        formData.append( "note", note.trim() );
-      }
-
-      // Submit the entry
-      await addEntry( formData );
-
-      // Reset form
-      setNote( "" );
-      setSelectedDate( formattedToday );
-
-      // Refresh paginated entries
-      const { success: ok, data: dt, pagination: pg } = await fetchEntries( {
+  const handleLogOccurrence = () => {
+    addEntryMutation.mutate(
+      {
         trackerId: tracker.id,
-        limit: currentLimit,
-        page: currentPage
-      } );
-
-      if ( ok ) {
-        setEntries( dt as TrackerEntry[] );
-        setTotalEntries( pg?.total || 0 );
-
-        // Update days since last occurrence
-        if ( ( dt as TrackerEntry[] ).length > 0 ) {
-          const lastEntry = ( dt as TrackerEntry[] )[ 0 ];
-          const lastDate = new Date( lastEntry.date );
-          const diffTime = Math.abs( today.getTime() - lastDate.getTime() );
-          const diffDays = Math.floor( diffTime / ( 1000 * 60 * 60 * 24 ) );
-          setDaysSinceLastOccurrence( diffDays );
-        }
+        date: new Date( selectedDate ),
+        note: note.trim() || null,
+        tags: [],
+      },
+      {
+        onSuccess: () => {
+          setNote( "" );
+          setSelectedDate( formattedToday );
+          // Streak also needs refreshing
+          void queryClient.invalidateQueries( {
+            queryKey: [ "occurrenceStreak", tracker.id ],
+          } );
+          if ( onUpdate ) onUpdate();
+        },
       }
-
-      // Call the onUpdate callback if provided
-      if ( onUpdate ) onUpdate();
-    } catch ( error ) {
-      console.error( "Failed to log occurrence:", error );
-    } finally {
-      setIsLoading( false );
-    }
+    );
   };
 
   return (
@@ -135,6 +98,22 @@ export default function OccurrenceTracker( { tracker, onUpdate }: OccurrenceTrac
           ) : (
             `${daysSinceLastOccurrence} days since last occurrence`
           )}
+        </div>
+      </div>
+
+      {/* Streak stats */}
+      <div className="grid grid-cols-2 gap-4 mb-6">
+        <div className="bg-muted/50 rounded-lg p-4 text-center">
+          <Flame className="w-6 h-6 mx-auto mb-1 text-orange-500" />
+          <div className="text-2xl font-bold">{streakData?.current ?? 0}</div>
+          <div className="text-sm text-foreground/70">Current Streak</div>
+          <div className="text-xs text-foreground/50">days</div>
+        </div>
+        <div className="bg-muted/50 rounded-lg p-4 text-center">
+          <span className="text-2xl mb-1 block">🏆</span>
+          <div className="text-2xl font-bold">{streakData?.longest ?? 0}</div>
+          <div className="text-sm text-foreground/70">Longest Streak</div>
+          <div className="text-xs text-foreground/50">days</div>
         </div>
       </div>
 
@@ -174,16 +153,16 @@ export default function OccurrenceTracker( { tracker, onUpdate }: OccurrenceTrac
         <div className="flex justify-center mt-4">
           <Button
             onClick={handleLogOccurrence}
-            disabled={isLoading}
-            className="px-8"
+            disabled={addEntryMutation.isPending}
+            className="px-8 h-11"
             style={{ backgroundColor: tracker.color || undefined }}
           >
-            {isLoading ? "Logging..." : "Log Occurrence"}
+            {addEntryMutation.isPending ? "Logging..." : "Log Occurrence"}
           </Button>
         </div>
       </div>
 
-      {/* Simple calendar visualization (placeholder) */}
+      {/* Calendar placeholder */}
       <div className="mt-8">
         <h3 className="font-medium text-sm mb-3">Occurrence Calendar</h3>
         <div className="text-center p-4 border border-dashed border-gray-300 dark:border-gray-700 rounded-md">
@@ -209,6 +188,11 @@ export default function OccurrenceTracker( { tracker, onUpdate }: OccurrenceTrac
                     <div className="font-medium">
                       {formatDate( entry.date )}
                     </div>
+                    <EditEntryModal
+                      entry={entry}
+                      trackerType={TrackerType.OCCURRENCE}
+                      onSuccess={handleEntryUpdated}
+                    />
                   </div>
                   {entry.note && (
                     <div className="text-sm text-foreground/70 mt-1 italic">

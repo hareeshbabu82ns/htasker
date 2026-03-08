@@ -1,10 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Tracker, TrackerEntry } from "@/types";
-import { useTracker } from "@/hooks/useTracker";
+import { Tracker, TrackerEntry, TrackerType } from "@/types";
+import {
+  useTrackerQuery,
+  useEntriesQuery,
+  useAddEntryMutation,
+} from "@/hooks/useTrackerQuery";
+import { trackerKeys } from "@/hooks/queries/trackerQueries";
 import EntryPagination from "../EntryPagination";
+import EditEntryModal from "../EditEntryModal";
 
 interface AmountTrackerProps {
   tracker: Tracker;
@@ -12,108 +19,31 @@ interface AmountTrackerProps {
 }
 
 export default function AmountTracker( { tracker, onUpdate }: AmountTrackerProps ) {
-  const { addEntry, fetchEntries, fetchTracker, isLoading: isHookLoading } = useTracker();
-  // Pagination states
+  const queryClient = useQueryClient();
+
   const [ currentPage, setCurrentPage ] = useState( 1 );
   const [ currentLimit, setCurrentLimit ] = useState( 10 );
-  const [ totalEntries, setTotalEntries ] = useState( 0 );
-
   const [ amount, setAmount ] = useState( "" );
   const [ currency, setCurrency ] = useState( "USD" );
   const [ note, setNote ] = useState( "" );
-  const [ isSubmitting, setIsSubmitting ] = useState( false );
-  const [ displayedEntries, setDisplayedEntries ] = useState<TrackerEntry[]>( [] );
-  const [ isLoadingEntries, setIsLoadingEntries ] = useState( false );
-  const [ totalAmount, setTotalAmount ] = useState( 0 );
-  const [ isCalculatingTotal, setIsCalculatingTotal ] = useState( false );
 
-  // Fetch entries and calculate total when component mounts or tracker changes
-  useEffect( () => {
-    loadEntries();
-    calculateTotalFromAllEntries();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ tracker.id, currentPage, currentLimit ] );
+  const trackerQuery = useTrackerQuery( tracker.id );
+  const entriesQuery = useEntriesQuery( tracker.id, currentPage, currentLimit );
+  const addEntryMutation = useAddEntryMutation( tracker.id );
 
-  // Function to load entries for display in UI
-  const loadEntries = async () => {
-    setIsLoadingEntries( true );
-    try {
-      const { success, data, pagination } = await fetchEntries( {
-        trackerId: tracker.id,
-        limit: currentLimit,
-        page: currentPage,
-      } );
+  const totalAmount =
+    trackerQuery.data?.statistics?.totalValue ??
+    tracker.statistics?.totalValue ??
+    0;
 
-      if ( success ) {
-        setDisplayedEntries( data as TrackerEntry[] );
-        setTotalEntries( pagination?.total || 0 );
-      }
-    } catch ( error ) {
-      console.error( "Failed to fetch display entries:", error );
-    } finally {
-      setIsLoadingEntries( false );
-    }
-  };
+  const displayedEntries = ( entriesQuery.data?.entries ?? [] ) as TrackerEntry[];
+  const totalEntries = entriesQuery.data?.total ?? 0;
+  const isLoadingEntries = entriesQuery.isLoading;
+  const isCalculatingTotal = trackerQuery.isLoading;
 
-  // Function to calculate total from ALL entries in database
-  const calculateTotalFromAllEntries = async () => {
-    setIsCalculatingTotal( true );
-    try {
-      const response = await fetchTracker( tracker.id );
-      if ( response.success ) {
-        const trackerData = response.data as Tracker;
-        setTotalAmount( trackerData.statistics?.totalValue || 0 );
-      }
-    } catch ( error ) {
-      console.error( "Failed to calculate total:", error );
-    } finally {
-      setIsCalculatingTotal( false );
-    }
-  };
-
-  // Handle submitting a new amount entry
-  const handleSubmit = async ( e: React.FormEvent ) => {
-    e.preventDefault();
-
-    if ( !amount || isNaN( parseFloat( amount ) ) ) {
-      return;
-    }
-
-    setIsSubmitting( true );
-
-    try {
-      const numericAmount = parseFloat( amount );
-
-      // Create form data for the entry
-      const formData = new FormData();
-      formData.append( "trackerId", tracker.id );
-      formData.append( "value", numericAmount.toString() );
-      formData.append( "date", new Date().toISOString() );
-
-      if ( note ) {
-        formData.append( "note", note );
-      }
-
-      // Add currency as a tag
-      formData.append( "tags", currency );
-
-      // Submit the entry
-      const result = await addEntry( formData );
-
-      if ( result.success ) {
-        // Reset form and reload entries
-        setAmount( "" );
-        setNote( "" );
-        await loadEntries();
-        await calculateTotalFromAllEntries();
-
-        if ( onUpdate ) onUpdate();
-      }
-    } catch ( error ) {
-      console.error( "Failed to add amount:", error );
-    } finally {
-      setIsSubmitting( false );
-    }
+  const handleEntryUpdated = () => {
+    void queryClient.invalidateQueries( { queryKey: trackerKeys.detail( tracker.id ) } );
+    void queryClient.invalidateQueries( { queryKey: [ "entries", tracker.id ] } );
   };
 
   // Common currency options
@@ -125,26 +55,42 @@ export default function AmountTracker( { tracker, onUpdate }: AmountTrackerProps
     { code: "None", symbol: "" },
   ];
 
-  // Format currency amount
   const formatCurrency = ( value: number ) => {
-    const currencyObj = currencies.find( c => c.code === currency );
-
-    if ( !currencyObj || currencyObj.code === "None" ) {
-      return value.toFixed( 2 );
-    }
-
+    const currencyObj = currencies.find( ( c ) => c.code === currency );
+    if ( !currencyObj || currencyObj.code === "None" ) return value.toFixed( 2 );
     return `${currencyObj.symbol}${value.toFixed( 2 )}`;
   };
 
-  // Format date for display
   const formatDate = ( date: Date ) => {
     return new Date( date ).toLocaleDateString( undefined, {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     } );
+  };
+
+  const handleSubmit = ( e: React.FormEvent ) => {
+    e.preventDefault();
+    if ( !amount || isNaN( parseFloat( amount ) ) ) return;
+
+    addEntryMutation.mutate(
+      {
+        trackerId: tracker.id,
+        value: parseFloat( amount ),
+        date: new Date(),
+        note: note.trim() || null,
+        tags: [ currency ],
+      },
+      {
+        onSuccess: () => {
+          setAmount( "" );
+          setNote( "" );
+          if ( onUpdate ) onUpdate();
+        },
+      }
+    );
   };
 
   return (
@@ -207,11 +153,11 @@ export default function AmountTracker( { tracker, onUpdate }: AmountTrackerProps
         <div className="flex justify-center">
           <Button
             type="submit"
-            disabled={isSubmitting || !amount || isNaN( parseFloat( amount ) )}
-            className="px-8"
+            disabled={addEntryMutation.isPending || !amount || isNaN( parseFloat( amount ) )}
+            className="px-8 h-11"
             style={{ backgroundColor: tracker.color || undefined }}
           >
-            {isSubmitting ? "Adding..." : "Add Amount"}
+            {addEntryMutation.isPending ? "Adding..." : "Add Amount"}
           </Button>
         </div>
       </form>
@@ -252,6 +198,11 @@ export default function AmountTracker( { tracker, onUpdate }: AmountTrackerProps
                         {tag}
                       </span>
                     ) )}
+                    <EditEntryModal
+                      entry={entry}
+                      trackerType={TrackerType.AMOUNT}
+                      onSuccess={handleEntryUpdated}
+                    />
                   </div>
                 </div>
               ) )}

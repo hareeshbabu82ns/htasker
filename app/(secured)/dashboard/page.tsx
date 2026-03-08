@@ -1,7 +1,9 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { BadgeDollarSign, CalendarRange, Clock3, Hash } from 'lucide-react';
-import RecentTrackers from '@/components/features/dashboard/RecentTrackers'; // Import the new component
+import RecentTrackers from '@/components/features/dashboard/RecentTrackers';
+import SummaryStats from '@/components/features/dashboard/SummaryStats';
+import PinnedTrackers from '@/components/features/dashboard/PinnedTrackers';
 
 export default function DashboardPage() {
   return (
@@ -22,6 +24,9 @@ export default function DashboardPage() {
         </div>
       </section>
 
+      {/* Summary stats widget */}
+      <SummaryStats />
+
       {/* Quick actions section */}
       <section className="space-y-4">
         <h2 className="text-xl font-semibold">Quick Actions</h2>
@@ -29,31 +34,34 @@ export default function DashboardPage() {
           <QuickActionCard
             title="Timer"
             description="Track duration of activities"
-            href="/timer"
+            href="/trackers/new?type=TIMER"
             icon={<Clock3 />}
           />
           <QuickActionCard
             title="Counter"
             description="Track occurrences and quantities"
-            href="/counter"
+            href="/trackers/new?type=COUNTER"
             icon={<Hash />}
           />
           <QuickActionCard
             title="Amount"
             description="Track monetary values and expenses"
-            href="/amount"
+            href="/trackers/new?type=AMOUNT"
             icon={<BadgeDollarSign />}
           />
           <QuickActionCard
             title="Occurrence"
             description="Track date-based events"
-            href="/occurrence"
+            href="/trackers/new?type=OCCURRENCE"
             icon={<CalendarRange />}
           />
         </div>
       </section>
 
-      {/* Use the new RecentTrackers component */}
+      {/* Pinned trackers widget */}
+      <PinnedTrackers />
+
+      {/* Recent trackers */}
       <RecentTrackers />
     </div>
   );

@@ -1,10 +1,14 @@
 "use client";
 
+import ServiceWorkerRegistration from "@/components/features/pwa/ServiceWorkerRegistration";
+import InstallPrompt from "@/components/features/pwa/InstallPrompt";
+import OfflineIndicator from "@/components/features/pwa/OfflineIndicator";
+import BottomNav from "@/components/features/navigation/BottomNav";
 import { ReactNode, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ThemeToggle } from "@/components/ui/theme/ThemeToggle";
-import { BadgeDollarSign, CalendarRange, Clock3, Hash } from "lucide-react";
+import { BadgeDollarSign, CalendarRange, Clock3, Hash, Download } from "lucide-react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 interface AppLayoutProps {
@@ -23,6 +27,7 @@ export default function AppLayout( { children }: AppLayoutProps ) {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <ServiceWorkerRegistration />
       <div className="flex h-screen bg-background">
         {/* Mobile sidebar backdrop */}
         {sidebarOpen && (
@@ -109,10 +114,16 @@ export default function AppLayout( { children }: AppLayoutProps ) {
               isActive={isActive( "/stats" )}
             />
             <NavItem
-              href="/settings"
+              href="/settings/profile"
               icon={<SettingsIcon />}
               label="Settings"
-              isActive={isActive( "/settings" )}
+              isActive={isActive( "/settings/profile" )}
+            />
+            <NavItem
+              href="/settings/export"
+              icon={<Download className="w-5 h-5" />}
+              label="Export Data"
+              isActive={isActive( "/settings/export" )}
             />
           </nav>
         </aside>
@@ -191,8 +202,11 @@ export default function AppLayout( { children }: AppLayoutProps ) {
           </header>
 
           {/* Main content area */}
-          <main className="flex-1 overflow-auto p-4 lg:p-6">{children}</main>
+          <main className="flex-1 overflow-auto p-4 pb-20 lg:p-6 md:pb-6">{children}</main>
         </div>
+        <BottomNav />
+        <InstallPrompt />
+        <OfflineIndicator />
       </div>
     </QueryClientProvider>
   );

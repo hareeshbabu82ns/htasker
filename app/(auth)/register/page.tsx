@@ -3,6 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
+import { registerUser } from "@/app/actions/auth";
 import { Button } from "@/components/ui/button";
 
 export default function RegisterPage() {
@@ -19,15 +21,28 @@ export default function RegisterPage() {
     setError( "" );
 
     try {
-      // In a real application, this would be an API call to register a user
-      // For now, we'll simulate a successful registration
-      await new Promise( ( resolve ) => setTimeout( resolve, 1000 ) );
+      const result = await registerUser( { name, email, password } );
 
-      // Redirect to dashboard after "registration"
-      router.push( "/dashboard" );
-    } catch ( err ) {
+      if ( !result.success ) {
+        setError( result.error );
+        return;
+      }
+
+      // Auto sign-in after registration
+      const signInResult = await signIn( "credentials", {
+        email,
+        password,
+        redirect: false,
+      } );
+
+      if ( signInResult?.error ) {
+        setError( "Account created but sign-in failed. Please try logging in." );
+      } else {
+        router.push( "/dashboard" );
+        router.refresh();
+      }
+    } catch {
       setError( "Registration failed. Please try again." );
-      console.error( err );
     } finally {
       setIsLoading( false );
     }
@@ -140,6 +155,7 @@ export default function RegisterPage() {
           <div className="mt-6 grid grid-cols-2 gap-3">
             <button
               type="button"
+              onClick={() => signIn( "google", { callbackUrl: "/dashboard" } )}
               className="flex justify-center items-center w-full border border-border rounded-md p-2 hover:bg-muted"
             >
               <GoogleIcon className="h-5 w-5 mr-2" />
@@ -147,6 +163,7 @@ export default function RegisterPage() {
             </button>
             <button
               type="button"
+              onClick={() => signIn( "github", { callbackUrl: "/dashboard" } )}
               className="flex justify-center items-center w-full border border-border rounded-md p-2 hover:bg-muted"
             >
               <GithubIcon className="h-5 w-5 mr-2" />

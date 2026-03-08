@@ -6,7 +6,6 @@ import CounterTracker from "./types/CounterTracker";
 import AmountTracker from "./types/AmountTracker";
 import OccurrenceTracker from "./types/OccurrenceTracker";
 import CustomTracker from "./types/CustomTracker";
-import { useState } from "react";
 
 interface TrackerViewProps {
   tracker: Tracker;
@@ -17,9 +16,6 @@ interface TrackerViewProps {
  * TrackerView component that renders the appropriate tracker component based on type
  */
 export default function TrackerView( { tracker, onUpdate }: TrackerViewProps ) {
-  const [ isLoading, setIsLoading ] = useState( false );
-
-  // Render the appropriate tracker component based on type
   const renderTrackerByType = () => {
     switch ( tracker.type ) {
       case TrackerType.TIMER:
@@ -66,14 +62,7 @@ export default function TrackerView( { tracker, onUpdate }: TrackerViewProps ) {
         )}
       </div>
 
-      {/* Render the appropriate tracker component */}
-      {isLoading ? (
-        <div className="flex items-center justify-center p-10">
-          <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary"></div>
-        </div>
-      ) : (
-        renderTrackerByType()
-      )}
+      {renderTrackerByType()}
     </div>
   );
 }

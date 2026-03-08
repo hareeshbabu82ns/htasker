@@ -35,6 +35,11 @@ export interface Tracker {
   tags: string[];
   color?: string | null;
   icon?: string | null;
+  isPinned?: boolean;
+  goalEnabled?: boolean;
+  goalValue?: number | null;
+  goalPeriod?: string | null;
+  goalUnit?: string | null;
   createdAt: Date;
   updatedAt: Date;
   userId: string;

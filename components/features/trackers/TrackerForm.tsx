@@ -13,11 +13,8 @@ import { createTracker, updateTracker } from "@/app/actions/trackers";
 const formSchema = z.object( {
   name: z.string().min( 1, "Name is required" ).max( 50, "Name must be 50 characters or less" ),
   description: z.string().max( 200, "Description must be 200 characters or less" ).optional(),
-  type: z.nativeEnum( TrackerType, {
-    required_error: "Tracker type is required",
-    invalid_type_error: "Invalid tracker type",
-  } ),
-  status: z.nativeEnum( TrackerStatus ).optional(),
+  type: z.enum( TrackerType ),
+  status: z.enum( TrackerStatus ).optional(),
   tags: z.array( z.string() ).default( [] ),
   color: z.string().regex( /^#([0-9a-f]{3}){1,2}$/i, "Invalid color format" ).optional(),
   icon: z.string().optional(),

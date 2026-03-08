@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 
 export default function LoginPage() {
@@ -18,15 +19,20 @@ export default function LoginPage() {
     setError( "" );
 
     try {
-      // In a real application, this would be an API call to authenticate
-      // For now, we'll simulate a successful login
-      await new Promise( ( resolve ) => setTimeout( resolve, 1000 ) );
+      const result = await signIn( "credentials", {
+        email,
+        password,
+        redirect: false,
+      } );
 
-      // Redirect to dashboard after "login"
-      router.push( "/dashboard" );
-    } catch ( err ) {
-      setError( "Failed to login. Please check your credentials." );
-      console.error( err );
+      if ( result?.error ) {
+        setError( "Invalid email or password. Please try again." );
+      } else {
+        router.push( "/dashboard" );
+        router.refresh();
+      }
+    } catch {
+      setError( "Sign in failed. Please try again." );
     } finally {
       setIsLoading( false );
     }
@@ -128,6 +134,7 @@ export default function LoginPage() {
           <div className="mt-6 grid grid-cols-2 gap-3">
             <button
               type="button"
+              onClick={() => signIn( "google", { callbackUrl: "/dashboard" } )}
               className="flex justify-center items-center w-full border border-border rounded-md p-2 hover:bg-muted"
             >
               <GoogleIcon className="h-5 w-5 mr-2" />
@@ -135,6 +142,7 @@ export default function LoginPage() {
             </button>
             <button
               type="button"
+              onClick={() => signIn( "github", { callbackUrl: "/dashboard" } )}
               className="flex justify-center items-center w-full border border-border rounded-md p-2 hover:bg-muted"
             >
               <GithubIcon className="h-5 w-5 mr-2" />

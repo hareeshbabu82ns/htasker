@@ -1,10 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Tracker, TrackerEntry } from "@/types";
-import { useTracker } from "@/hooks/useTracker";
+import { Tracker, TrackerEntry, TrackerType } from "@/types";
+import {
+  useTrackerQuery,
+  useEntriesQuery,
+  useCounterMutation,
+} from "@/hooks/useTrackerQuery";
+import { trackerKeys } from "@/hooks/queries/trackerQueries";
 import EntryPagination from "../EntryPagination";
+import EditEntryModal from "../EditEntryModal";
 
 interface CounterTrackerProps {
   tracker: Tracker;
@@ -12,53 +19,31 @@ interface CounterTrackerProps {
 }
 
 export default function CounterTracker( { tracker, onUpdate }: CounterTrackerProps ) {
-  const { addEntry, fetchEntries, fetchTracker } = useTracker();
-  // Pagination states
+  const queryClient = useQueryClient();
+
   const [ currentPage, setCurrentPage ] = useState( 1 );
   const [ currentLimit, setCurrentLimit ] = useState( 10 );
-  const [ totalEntries, setTotalEntries ] = useState( 0 );
-
-  const [ currentValue, setCurrentValue ] = useState( 0 );
-  const [ isLoading, setIsLoading ] = useState( false );
   const [ changeAmount, setChangeAmount ] = useState( 1 );
-  const [ entries, setEntries ] = useState<TrackerEntry[]>( [] );
-  const [ isLoadingEntries, setIsLoadingEntries ] = useState( false );
 
-  // Fetch entries when component mounts or after updates
-  useEffect( () => {
-    const loadEntries = async () => {
-      setIsLoadingEntries( true );
-      try {
-        // Fetch current total value
-        const response = await fetchTracker( tracker.id );
-        if ( response.success ) {
-          const trackerData = response.data as Tracker;
-          setCurrentValue( trackerData.statistics?.totalValue || 0 );
-        }
+  const trackerQuery = useTrackerQuery( tracker.id );
+  const entriesQuery = useEntriesQuery( tracker.id, currentPage, currentLimit );
+  const counterMutation = useCounterMutation( tracker.id );
 
-        // Fetch paginated entries for display
-        const { success, data, pagination } = await fetchEntries( {
-          trackerId: tracker.id,
-          limit: currentLimit,
-          page: currentPage
-        } );
+  const currentValue =
+    trackerQuery.data?.statistics?.totalValue ??
+    tracker.statistics?.totalValue ??
+    0;
 
-        if ( success ) {
-          setEntries( data as TrackerEntry[] );
-          setTotalEntries( pagination?.total || 0 );
-        }
-      } catch ( error ) {
-        console.error( "Failed to fetch counter entries:", error );
-      } finally {
-        setIsLoadingEntries( false );
-      }
-    };
+  const entries = ( entriesQuery.data?.entries ?? [] ) as TrackerEntry[];
+  const totalEntries = entriesQuery.data?.total ?? 0;
+  const isLoadingEntries = entriesQuery.isLoading;
+  const isPending = counterMutation.isPending;
 
-    loadEntries();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ tracker.id, currentPage, currentLimit ] );
+  const handleEntryUpdated = () => {
+    void queryClient.invalidateQueries( { queryKey: trackerKeys.detail( tracker.id ) } );
+    void queryClient.invalidateQueries( { queryKey: [ "entries", tracker.id ] } );
+  };
 
-  // Format date for display
   const formatDate = ( date: Date ) => {
     return new Intl.DateTimeFormat( "en-US", {
       month: "short",
@@ -68,86 +53,26 @@ export default function CounterTracker( { tracker, onUpdate }: CounterTrackerPro
     } ).format( new Date( date ) );
   };
 
-  // Handle incrementing the counter
-  const handleIncrement = async () => {
-    setIsLoading( true );
-    try {
-      const newValue = currentValue + changeAmount;
-
-      // Create form data for the entry
-      const formData = new FormData();
-      formData.append( "trackerId", tracker.id );
-      formData.append( "value", changeAmount.toString() );
-      formData.append( "date", new Date().toISOString() );
-
-      // Submit the entry
-      await addEntry( formData );
-
-      // Update local state
-      setCurrentValue( newValue );
-
-      if ( onUpdate ) onUpdate();
-    } catch ( error ) {
-      console.error( "Failed to increment counter:", error );
-    } finally {
-      setIsLoading( false );
-    }
+  const handleIncrement = () => {
+    counterMutation.mutate(
+      { value: changeAmount },
+      { onSuccess: () => { if ( onUpdate ) onUpdate(); } }
+    );
   };
 
-  // Handle decrementing the counter
-  const handleDecrement = async () => {
-    setIsLoading( true );
-    try {
-      const newValue = currentValue - changeAmount;
-
-      // Create form data for the entry
-      const formData = new FormData();
-      formData.append( "trackerId", tracker.id );
-      formData.append( "value", ( -changeAmount ).toString() );
-      formData.append( "date", new Date().toISOString() );
-
-      // Submit the entry
-      await addEntry( formData );
-
-      // Update local state
-      setCurrentValue( newValue );
-
-      if ( onUpdate ) onUpdate();
-    } catch ( error ) {
-      console.error( "Failed to decrement counter:", error );
-    } finally {
-      setIsLoading( false );
-    }
+  const handleDecrement = () => {
+    counterMutation.mutate(
+      { value: -changeAmount },
+      { onSuccess: () => { if ( onUpdate ) onUpdate(); } }
+    );
   };
 
-  // Handle resetting the counter
-  const handleReset = async () => {
-    setIsLoading( true );
-    try {
-      // Calculate the amount to reset (negative of current value)
-      const resetAmount = -currentValue;
-
-      // Only create an entry if there's a change
-      if ( resetAmount !== 0 ) {
-        const formData = new FormData();
-        formData.append( "trackerId", tracker.id );
-        formData.append( "value", resetAmount.toString() );
-        formData.append( "date", new Date().toISOString() );
-        formData.append( "note", "Counter reset" );
-
-        // Submit the entry
-        await addEntry( formData );
-      }
-
-      // Reset to zero
-      setCurrentValue( 0 );
-
-      if ( onUpdate ) onUpdate();
-    } catch ( error ) {
-      console.error( "Failed to reset counter:", error );
-    } finally {
-      setIsLoading( false );
-    }
+  const handleReset = () => {
+    if ( currentValue === 0 ) return;
+    counterMutation.mutate(
+      { value: -currentValue, note: "Counter reset" },
+      { onSuccess: () => { if ( onUpdate ) onUpdate(); } }
+    );
   };
 
   return (
@@ -160,7 +85,7 @@ export default function CounterTracker( { tracker, onUpdate }: CounterTrackerPro
         <div className="text-sm text-foreground/70">Current count</div>
       </div>
 
-      {/* Counter increment/decrement controls */}
+      {/* Counter controls */}
       <div className="flex flex-col space-y-4">
         {/* Change count selector */}
         <div className="flex justify-center items-center space-x-2 mb-2">
@@ -170,7 +95,7 @@ export default function CounterTracker( { tracker, onUpdate }: CounterTrackerPro
               <button
                 key={count}
                 onClick={() => setChangeAmount( count )}
-                className={`px-3 py-1 text-sm ${changeAmount === count
+                className={`px-3 py-1 text-sm min-h-[44px] ${changeAmount === count
                   ? "bg-primary text-primary-foreground"
                   : "bg-background hover:bg-muted"
                   }`}
@@ -185,7 +110,7 @@ export default function CounterTracker( { tracker, onUpdate }: CounterTrackerPro
         <div className="flex justify-center space-x-3">
           <Button
             onClick={handleDecrement}
-            disabled={isLoading}
+            disabled={isPending}
             variant="outline"
             className="w-16 h-16 rounded-full text-xl"
           >
@@ -194,7 +119,7 @@ export default function CounterTracker( { tracker, onUpdate }: CounterTrackerPro
 
           <Button
             onClick={handleIncrement}
-            disabled={isLoading}
+            disabled={isPending}
             className="w-16 h-16 rounded-full text-xl"
             style={{ backgroundColor: tracker.color || undefined }}
           >
@@ -206,10 +131,10 @@ export default function CounterTracker( { tracker, onUpdate }: CounterTrackerPro
         <div className="flex justify-center mt-4">
           <Button
             onClick={handleReset}
-            disabled={isLoading || currentValue === 0}
+            disabled={isPending || currentValue === 0}
             variant="ghost"
             size="sm"
-            className="text-xs"
+            className="h-11 text-xs"
           >
             Reset to 0
           </Button>
@@ -232,8 +157,15 @@ export default function CounterTracker( { tracker, onUpdate }: CounterTrackerPro
                     <div className="font-medium">
                       {formatDate( entry.date )}
                     </div>
-                    <div className={`${( entry.value || 0 ) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                      {( entry.value || 0 ) > 0 ? '+' : ''}{entry.value}
+                    <div className="flex items-center gap-1">
+                      <span className={`${( entry.value || 0 ) >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
+                        {( entry.value || 0 ) > 0 ? "+" : ""}{entry.value}
+                      </span>
+                      <EditEntryModal
+                        entry={entry}
+                        trackerType={TrackerType.COUNTER}
+                        onSuccess={handleEntryUpdated}
+                      />
                     </div>
                   </div>
                   {entry.note && (

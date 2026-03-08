@@ -5,6 +5,15 @@ import prisma from "@/lib/db/prisma";
 import { TrackerStatus, TrackerType } from "@/types";
 import { revalidatePath } from "next/cache";
 import { Tracker } from "../generated/prisma";
+import { auth } from "@/auth";
+
+async function requireUserId(): Promise<string> {
+  const session = await auth();
+  if (!session?.user?.id) {
+    throw new Error("Unauthorized");
+  }
+  return session.user.id;
+}
 
 // Define a response type for better type safety
 export type TrackerActionResponse<T = unknown> =
@@ -29,10 +38,8 @@ const TrackerSchema = z.object({
     .max(200, "Description cannot exceed 200 characters")
     .optional()
     .nullable(),
-  type: z.nativeEnum(TrackerType, {
-    errorMap: () => ({ message: "Please select a valid tracker type" }),
-  }),
-  status: z.nativeEnum(TrackerStatus).optional(),
+  type: z.enum(TrackerType),
+  status: z.enum(TrackerStatus).optional(),
   tags: z.array(z.string()).optional().default([]),
   color: z
     .string()
@@ -60,8 +67,7 @@ export async function createTracker(
   data: CreateTrackerInput
 ): Promise<TrackerActionResponse<{ id: string }>> {
   try {
-    // Use a valid MongoDB ObjectID format for the userId (24 hex characters)
-    const userId = "000000000000000000000001"; // Valid ObjectID format placeholder
+    const userId = await requireUserId();
 
     // Validate input data
     const validatedData = TrackerSchema.parse(data);
@@ -82,10 +88,14 @@ export async function createTracker(
   } catch (error) {
     console.error("Error creating tracker:", error);
 
+    if (error instanceof Error && error.message === "Unauthorized") {
+      return { success: false, error: "Unauthorized" };
+    }
+
     if (error instanceof z.ZodError) {
       return {
         success: false,
-        error: `Validation failed: ${error.errors
+        error: `Validation failed: ${error.issues
           .map((e) => e.message)
           .join(", ")}`,
       };
@@ -102,9 +112,10 @@ export async function getTracker(
   id: string
 ): Promise<TrackerActionResponse<unknown>> {
   try {
-    // In a real app, we'd verify user permissions here
-    const tracker = await prisma.tracker.findUnique({
-      where: { id },
+    const userId = await requireUserId();
+
+    const tracker = await prisma.tracker.findFirst({
+      where: { id, userId },
       include: {
         entries: {
           orderBy: { date: "desc" },
@@ -120,6 +131,9 @@ export async function getTracker(
     return { success: true, data: tracker };
   } catch (error) {
     console.error("Error getting tracker:", error);
+    if (error instanceof Error && error.message === "Unauthorized") {
+      return { success: false, error: "Unauthorized" };
+    }
     return { success: false, error: "Failed to retrieve tracker" };
   }
 }
@@ -132,29 +146,37 @@ export async function updateTracker(
   data: Partial<CreateTrackerInput>
 ): Promise<TrackerActionResponse<{ id: string }>> {
   try {
-    // In a real app, we'd verify user permissions here
+    const userId = await requireUserId();
 
     // Validate update data
     const validatedData = TrackerSchema.partial().parse(data);
 
-    // Update tracker in database
-    const tracker = await prisma.tracker.update({
-      where: { id },
+    // Update tracker in database (scoped to owner)
+    const tracker = await prisma.tracker.updateMany({
+      where: { id, userId },
       data: validatedData,
     });
+
+    if (tracker.count === 0) {
+      return { success: false, error: "Tracker not found" };
+    }
 
     revalidatePath("/dashboard");
     revalidatePath("/trackers");
     revalidatePath(`/trackers/${id}`);
 
-    return { success: true, data: { id: tracker.id } };
+    return { success: true, data: { id } };
   } catch (error) {
     console.error("Error updating tracker:", error);
+
+    if (error instanceof Error && error.message === "Unauthorized") {
+      return { success: false, error: "Unauthorized" };
+    }
 
     if (error instanceof z.ZodError) {
       return {
         success: false,
-        error: `Validation failed: ${error.errors
+        error: `Validation failed: ${error.issues
           .map((e) => e.message)
           .join(", ")}`,
       };
@@ -171,12 +193,16 @@ export async function deleteTracker(
   id: string
 ): Promise<TrackerActionResponse<{ id: string }>> {
   try {
-    // In a real app, we'd verify user permissions here
+    const userId = await requireUserId();
 
-    // Delete tracker from database
-    await prisma.tracker.delete({
-      where: { id },
+    // Delete tracker from database (scoped to owner)
+    const result = await prisma.tracker.deleteMany({
+      where: { id, userId },
     });
+
+    if (result.count === 0) {
+      return { success: false, error: "Tracker not found" };
+    }
 
     revalidatePath("/dashboard");
     revalidatePath("/trackers");
@@ -184,12 +210,130 @@ export async function deleteTracker(
     return { success: true, data: { id } };
   } catch (error) {
     console.error("Error deleting tracker:", error);
+    if (error instanceof Error && error.message === "Unauthorized") {
+      return { success: false, error: "Unauthorized" };
+    }
     return { success: false, error: "Failed to delete tracker" };
+  }
+}
+
+/**
+ * Duplicate a tracker (clone with fresh statistics)
+ */
+export async function duplicateTracker(
+  id: string
+): Promise<TrackerActionResponse<{ id: string }>> {
+  try {
+    const userId = await requireUserId();
+
+    const original = await prisma.tracker.findFirst({
+      where: { id, userId },
+    });
+
+    if (!original) {
+      return { success: false, error: "Tracker not found" };
+    }
+
+    const duplicate = await prisma.tracker.create({
+      data: {
+        name: `Copy of ${original.name}`,
+        description: original.description,
+        type: original.type,
+        status: "INACTIVE",
+        tags: original.tags,
+        color: original.color,
+        icon: original.icon,
+        userId: original.userId,
+        statistics: {
+          totalEntries: 0,
+          totalTime: 0,
+          totalValue: 0,
+          totalCustom: "",
+        },
+      },
+    });
+
+    revalidatePath("/trackers");
+    revalidatePath("/dashboard");
+
+    return { success: true, data: { id: duplicate.id } };
+  } catch (error) {
+    console.error("Error duplicating tracker:", error);
+    if (error instanceof Error && error.message === "Unauthorized") {
+      return { success: false, error: "Unauthorized" };
+    }
+    return { success: false, error: "Failed to duplicate tracker" };
+  }
+}
+
+/**
+ * Archive multiple trackers by IDs
+ */
+export async function archiveTrackers(
+  ids: string[]
+): Promise<TrackerActionResponse<{ count: number }>> {
+  try {
+    const idsSchema = z.array(z.string().min(1)).min(1);
+    const validatedIds = idsSchema.parse(ids);
+
+    const userId = await requireUserId();
+
+    const result = await prisma.tracker.updateMany({
+      where: { id: { in: validatedIds }, userId },
+      data: { status: "ARCHIVED" },
+    });
+
+    revalidatePath("/trackers");
+    revalidatePath("/dashboard");
+
+    return { success: true, data: { count: result.count } };
+  } catch (error) {
+    console.error("Error archiving trackers:", error);
+    if (error instanceof Error && error.message === "Unauthorized") {
+      return { success: false, error: "Unauthorized" };
+    }
+    if (error instanceof z.ZodError) {
+      return { success: false, error: "Invalid tracker IDs provided" };
+    }
+    return { success: false, error: "Failed to archive trackers" };
+  }
+}
+
+/**
+ * Delete multiple trackers by IDs
+ */
+export async function deleteTrackers(
+  ids: string[]
+): Promise<TrackerActionResponse<{ count: number }>> {
+  try {
+    const idsSchema = z.array(z.string().min(1)).min(1);
+    const validatedIds = idsSchema.parse(ids);
+
+    const userId = await requireUserId();
+
+    const result = await prisma.tracker.deleteMany({
+      where: { id: { in: validatedIds }, userId },
+    });
+
+    revalidatePath("/trackers");
+    revalidatePath("/dashboard");
+
+    return { success: true, data: { count: result.count } };
+  } catch (error) {
+    console.error("Error deleting trackers:", error);
+    if (error instanceof Error && error.message === "Unauthorized") {
+      return { success: false, error: "Unauthorized" };
+    }
+    if (error instanceof z.ZodError) {
+      return { success: false, error: "Invalid tracker IDs provided" };
+    }
+    return { success: false, error: "Failed to delete trackers" };
   }
 }
 
 export type TrackerWithEntriesCount = Tracker & {
   entriesCount: number;
+  isPinned: boolean;
 };
 export type TrackerPagingResponse = {
   trackers: TrackerWithEntriesCount[];
@@ -208,10 +352,13 @@ export async function getTrackers(filters?: {
   sort?: string;
   page?: number;
   limit?: number;
+  pinned?: boolean;
 }): Promise<TrackerActionResponse<TrackerPagingResponse>> {
   try {
+    const userId = await requireUserId();
+
     // Build the where clause based on the provided filters
-    const where: any = {};
+    const where: any = { userId };
 
     // Add status filter if provided
     if (filters?.status) {
@@ -221,6 +368,11 @@ export async function getTrackers(filters?: {
     // Add type filter if provided
     if (filters?.type) {
       where.type = filters.type;
+    }
+
+    // Add pinned filter if provided
+    if (filters?.pinned !== undefined) {
+      where.isPinned = filters.pinned;
     }
 
     // Add search filter if provided
@@ -285,6 +437,174 @@ export async function getTrackers(filters?: {
     };
   } catch (error) {
     console.error("Error getting trackers:", error);
+    if (error instanceof Error && error.message === "Unauthorized") {
+      return { success: false, error: "Unauthorized" };
+    }
     return { success: false, error: "Failed to retrieve trackers" };
+  }
+}
+
+/**
+ * Pin a tracker (mark as favourite)
+ */
+export async function pinTracker(
+  id: string
+): Promise<TrackerActionResponse<{ id: string }>> {
+  try {
+    const userId = await requireUserId();
+
+    const result = await prisma.tracker.updateMany({
+      where: { id, userId },
+      data: { isPinned: true },
+    });
+
+    if (result.count === 0) {
+      return { success: false, error: "Tracker not found" };
+    }
+
+    revalidatePath("/dashboard");
+    revalidatePath("/trackers");
+
+    return { success: true, data: { id } };
+  } catch (error) {
+    console.error("Error pinning tracker:", error);
+    if (error instanceof Error && error.message === "Unauthorized") {
+      return { success: false, error: "Unauthorized" };
+    }
+    return { success: false, error: "Failed to pin tracker" };
+  }
+}
+
+/**
+ * Unpin a tracker (remove from favourites)
+ */
+export async function unpinTracker(
+  id: string
+): Promise<TrackerActionResponse<{ id: string }>> {
+  try {
+    const userId = await requireUserId();
+
+    const result = await prisma.tracker.updateMany({
+      where: { id, userId },
+      data: { isPinned: false },
+    });
+
+    if (result.count === 0) {
+      return { success: false, error: "Tracker not found" };
+    }
+
+    revalidatePath("/dashboard");
+    revalidatePath("/trackers");
+
+    return { success: true, data: { id } };
+  } catch (error) {
+    console.error("Error unpinning tracker:", error);
+    if (error instanceof Error && error.message === "Unauthorized") {
+      return { success: false, error: "Unauthorized" };
+    }
+    return { success: false, error: "Failed to unpin tracker" };
+  }
+}
+
+const GoalSchema = z.object({
+  enabled: z.boolean(),
+  value: z.number().optional().nullable(),
+  period: z.enum(["daily", "weekly", "monthly"]).optional().nullable(),
+  unit: z.string().max(20, "Unit cannot exceed 20 characters").optional().nullable(),
+});
+
+/**
+ * Set or update goal settings on a tracker
+ */
+export async function setTrackerGoal(
+  id: string,
+  goal: {
+    enabled: boolean;
+    value?: number | null;
+    period?: string | null;
+    unit?: string | null;
+  }
+): Promise<TrackerActionResponse<{ id: string }>> {
+  try {
+    const userId = await requireUserId();
+
+    const idSchema = z.string().min(1);
+    idSchema.parse(id);
+    const validatedGoal = GoalSchema.parse(goal);
+
+    const existing = await prisma.tracker.findFirst({ where: { id, userId } });
+    if (!existing) {
+      return { success: false, error: "Tracker not found" };
+    }
+
+    await prisma.tracker.update({
+      where: { id },
+      data: {
+        goalEnabled: validatedGoal.enabled,
+        goalValue: validatedGoal.value ?? null,
+        goalPeriod: validatedGoal.period ?? null,
+        goalUnit: validatedGoal.unit ?? null,
+        updatedAt: new Date(),
+      },
+    });
+
+    revalidatePath(`/trackers/${id}`);
+
+    return { success: true, data: { id } };
+  } catch (error) {
+    console.error("Error setting tracker goal:", error);
+    if (error instanceof Error && error.message === "Unauthorized") {
+      return { success: false, error: "Unauthorized" };
+    }
+    if (error instanceof z.ZodError) {
+      return {
+        success: false,
+        error: `Validation failed: ${error.issues.map((e) => e.message).join(", ")}`,
+      };
+    }
+    return { success: false, error: "Failed to set tracker goal" };
+  }
+}
+
+/**
+ * Clear goal settings from a tracker
+ */
+export async function clearTrackerGoal(
+  id: string
+): Promise<TrackerActionResponse<{ id: string }>> {
+  try {
+    const userId = await requireUserId();
+
+    const idSchema = z.string().min(1);
+    idSchema.parse(id);
+
+    const existing = await prisma.tracker.findFirst({ where: { id, userId } });
+    if (!existing) {
+      return { success: false, error: "Tracker not found" };
+    }
+
+    await prisma.tracker.update({
+      where: { id },
+      data: {
+        goalEnabled: false,
+        goalValue: null,
+        goalPeriod: null,
+        goalUnit: null,
+        updatedAt: new Date(),
+      },
+    });
+
+    revalidatePath(`/trackers/${id}`);
+
+    return { success: true, data: { id } };
+  } catch (error) {
+    console.error("Error clearing tracker goal:", error);
+    if (error instanceof Error && error.message === "Unauthorized") {
+      return { success: false, error: "Unauthorized" };
+    }
+    if (error instanceof z.ZodError) {
+      return { success: false, error: "Invalid tracker ID" };
+    }
+    return { success: false, error: "Failed to clear tracker goal" };
   }
 }

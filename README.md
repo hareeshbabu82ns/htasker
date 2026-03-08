@@ -1,4 +1,4 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# HTasker
 
 ## Getting Started
 
@@ -12,6 +12,33 @@ yarn dev
 pnpm dev
 # or
 bun dev
+```
+
+Create DB in MongoDB
+```sh
+# login as admin
+mongosh --host <host> --port <port> \
+-u admin -p \
+--authenticationDatabase admin
+
+# create db
+use htasks
+
+# create user
+db.createUser(
+  {
+    user: "htasks",
+    pwd: passwordPrompt(),
+    roles: [
+      { role: "readWrite", db: "htasks" }
+    ]
+  }
+)
+```
+
+`.env` for local
+```ini
+DATABASE_URL="mongodb://htasks:pwd@localhost:27018/htasks?replicaSet=rs0&directConnection=true"
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.

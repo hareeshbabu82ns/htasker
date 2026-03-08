@@ -62,7 +62,7 @@ export default async function EditTrackerPage( {
       </div>
 
       {/* Info box */}
-      <Alert variant="warning">
+      <Alert variant="destructive" className="border-destructive/50">
         <TriangleAlert className="h-6 w-6" />
         <AlertTitle className="text-lg">Edit with caution</AlertTitle>
         <AlertDescription>
