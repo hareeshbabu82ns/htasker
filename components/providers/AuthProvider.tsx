@@ -6,7 +6,7 @@ import { ReactNode } from "react";
 
 interface AuthProviderProps {
   children: ReactNode;
-  session: Session | null;
+  session?: Session | null;
 }
 
 export default function AuthProvider({ children, session }: AuthProviderProps) {

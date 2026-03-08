@@ -3,7 +3,6 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import AuthProvider from "@/components/providers/AuthProvider";
-import { auth } from "@/auth";
 import "./globals.css";
 import { themeConfig } from "@/config/theme";
 
@@ -54,18 +53,17 @@ export const viewport: Viewport = {
   minimumScale: 1,
 };
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const session = await auth();
   return (
     <html lang="en" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} bg-background text-foreground antialiased`}
       >
-        <AuthProvider session={session}>
+        <AuthProvider>
           <ThemeProvider
             attribute="class"
             defaultTheme={themeConfig.defaultTheme}
