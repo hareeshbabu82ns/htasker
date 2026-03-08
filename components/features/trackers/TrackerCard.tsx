@@ -482,8 +482,8 @@ export default function TrackerCard({
             : undefined
         }
       >
-        <div className="flex items-start justify-between">
-          <div className="flex items-start space-x-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex min-w-0 items-start space-x-3">
             {isSelected !== undefined && (
               <div className="mt-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                 <Checkbox
@@ -503,8 +503,8 @@ export default function TrackerCard({
             >
               {getTypeIcon(tracker.type)}
             </div>
-            <div>
-              <div className="flex items-center gap-2">
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
                 <h3 className="font-medium">{tracker.name}</h3>
                 {tracker.tags &&
                   tracker.tags.map((tag: string) => (
@@ -534,9 +534,9 @@ export default function TrackerCard({
               </div>
             </div>
           </div>
-          <div className="flex flex-col space-y-2" onClick={(e) => e.stopPropagation()}>
+          <div className="flex flex-row items-center justify-between sm:flex-col sm:items-end sm:space-y-2">
             {getStatsDisplay()}
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-2" onClick={(e) => e.stopPropagation()}>
               {tracker.status !== TrackerStatus.ARCHIVED && getActionButtons()}
               <Link href={`/trackers/${tracker.id}`}>
                 <Button
