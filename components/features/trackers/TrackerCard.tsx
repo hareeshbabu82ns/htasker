@@ -337,23 +337,27 @@ export default function TrackerCard({
           <div className="flex space-x-2">
             {isRunning ? (
               <Button
-                size="sm"
-                variant="destructive"
+                size="icon"
+                variant="outline"
                 onClick={handleTimerStop}
                 disabled={isLoading || !activeEntryId}
-                className="h-11"
+                className="size-8"
+                title="Stop Timer"
+                aria-label="Stop Timer"
               >
-                <PauseCircle className="mr-1 h-4 w-4" /> Stop
+                <PauseCircle className="mr-1 size-4 text-red-500" />
               </Button>
             ) : (
               <Button
-                size="sm"
+                size="icon"
                 variant="outline"
                 onClick={handleTimerStart}
                 disabled={isLoading}
-                className="h-11"
+                className="size-8"
+                title="Start Timer"
+                aria-label="Start Timer"
               >
-                <PlayCircle className="mr-1 h-4 w-4" /> Start
+                <PlayCircle className="mr-1 size-4" />
               </Button>
             )}
           </div>
@@ -366,32 +370,34 @@ export default function TrackerCard({
               variant="outline"
               onClick={handleDecrement}
               disabled={isLoading}
-              className="h-11 w-11"
+              className="size-8"
               aria-label={`Decrement ${tracker.name}`}
             >
-              <Minus className="h-4 w-4" aria-hidden="true" />
+              <Minus className="size-4" aria-hidden="true" />
             </Button>
             <Button
               size="icon"
               variant="outline"
               onClick={handleIncrement}
               disabled={isLoading}
-              className="h-11 w-11"
+              className="size-8"
               aria-label={`Increment ${tracker.name}`}
             >
-              <Plus className="h-4 w-4" aria-hidden="true" />
+              <Plus className="size-4" aria-hidden="true" />
             </Button>
           </div>
         );
       case TrackerType.OCCURRENCE:
         return (
           <Button
-            size="sm"
+            size="icon"
             variant="outline"
             onClick={() => (window.location.href = `/trackers/${tracker.id}`)}
-            className="h-11"
+            className="size-8"
+            title="Log"
+            aria-label="Log"
           >
-            <Calendar className="mr-1 h-4 w-4" /> Log
+            <Calendar className="mr-1 size-4" />
           </Button>
         );
       default:
@@ -439,19 +445,29 @@ export default function TrackerCard({
           </div>
         );
       }
+      case TrackerType.CUSTOM:
       case TrackerType.OCCURRENCE:
         const lastOccurrence = tracker.updatedAt;
         const today = new Date();
         const diffTime = Math.abs(today.getTime() - new Date(lastOccurrence).getTime());
         const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+        const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
+        const diffMinutes = Math.floor(diffTime / (1000 * 60));
+        const diffSeconds = Math.floor(diffTime / 1000);
 
         return (
           <div className="text-secondary text-lg">
-            {diffDays === 0 ? "Logged today" : `${diffDays} days since last occurrence`}
+            {diffDays === 0
+              ? diffHours === 0
+                ? diffMinutes === 0
+                  ? `${diffSeconds}s ago`
+                  : `${diffMinutes}m ago`
+                : `${diffHours}h ago`
+              : `${diffDays}d ago`}
           </div>
         );
       default:
-        return null;
+        return <div></div>;
     }
   };
 
@@ -528,13 +544,13 @@ export default function TrackerCard({
               </div>
               <p className="text-foreground/70 mt-1 text-sm">{tracker.description}</p>
               <div className="text-foreground/60 mt-2 flex items-center text-xs">
-                <span suppressHydrationWarning>Last used: {formatDate(tracker.updatedAt)}</span>
+                <span suppressHydrationWarning>{formatDate(tracker.updatedAt)}</span>
                 <span className="mx-2">•</span>
                 <span>{tracker.entriesCount ?? 0} entries</span>
               </div>
             </div>
           </div>
-          <div className="flex flex-row items-center justify-between sm:flex-col sm:items-end sm:space-y-2">
+          <div className="flex flex-row items-center justify-between space-x-2 sm:flex-col sm:items-end sm:space-y-2">
             {getStatsDisplay()}
             <div className="flex items-center space-x-2" onClick={(e) => e.stopPropagation()}>
               {tracker.status !== TrackerStatus.ARCHIVED && getActionButtons()}
@@ -542,7 +558,7 @@ export default function TrackerCard({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-11 w-11"
+                  className="size-8"
                   aria-label={`View ${tracker.name}`}
                 >
                   <EyeIcon aria-hidden="true" />
@@ -554,10 +570,10 @@ export default function TrackerCard({
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-11 w-11"
+                      className="size-8"
                       aria-label="More actions"
                     >
-                      <MoreHorizontal className="h-4 w-4" />
+                      <MoreHorizontal className="size-4" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
@@ -566,7 +582,7 @@ export default function TrackerCard({
                         href={`/trackers/${tracker.id}/edit`}
                         className="flex items-center gap-2"
                       >
-                        <Edit2Icon className="h-4 w-4" />
+                        <Edit2Icon className="size-4" />
                         Edit
                       </Link>
                     </DropdownMenuItem>
@@ -575,7 +591,7 @@ export default function TrackerCard({
                       disabled={isDuplicating}
                       className="flex items-center gap-2"
                     >
-                      <Copy className="h-4 w-4" />
+                      <Copy className="size-4" />
                       {isDuplicating ? "Duplicating…" : "Duplicate"}
                     </DropdownMenuItem>
                     <DropdownMenuItem
@@ -585,12 +601,12 @@ export default function TrackerCard({
                     >
                       {tracker.isPinned ? (
                         <>
-                          <PinOff className="h-4 w-4" />
+                          <PinOff className="size-4" />
                           {isPinning ? "Unpinning…" : "Unpin"}
                         </>
                       ) : (
                         <>
-                          <Pin className="h-4 w-4" />
+                          <Pin className="size-4" />
                           {isPinning ? "Pinning…" : "Pin to dashboard"}
                         </>
                       )}
@@ -602,7 +618,7 @@ export default function TrackerCard({
                           href={`/trackers/${tracker.id}/edit`}
                           className="text-muted-foreground flex items-center gap-2"
                         >
-                          <Archive className="h-4 w-4" />
+                          <Archive className="size-4" />
                           Archive
                         </Link>
                       </DropdownMenuItem>
