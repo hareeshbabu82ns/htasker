@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
 import { BadgeDollarSign, CalendarRange, Clock3, Hash } from "lucide-react";
 import RecentTrackers from "@/components/features/dashboard/RecentTrackers";
 import SummaryStats from "@/components/features/dashboard/SummaryStats";
@@ -8,23 +7,6 @@ import PinnedTrackers from "@/components/features/dashboard/PinnedTrackers";
 export default function DashboardPage() {
   return (
     <div className="space-y-6">
-      {/* Welcome section */}
-      <section className="bg-background border-border rounded-lg border p-6">
-        <h2 className="mb-4 text-2xl font-semibold">Welcome to HTracker</h2>
-        <p className="text-warning mb-6">
-          Track your time, count anything, monitor expenses, or record occurrences - all in one
-          place.
-        </p>
-        <div className="flex flex-wrap gap-4">
-          <Link href="/trackers/new">
-            <Button>Create New Tracker</Button>
-          </Link>
-          <Link href="/trackers">
-            <Button variant="outline">View All Trackers</Button>
-          </Link>
-        </div>
-      </section>
-
       {/* Summary stats widget */}
       <SummaryStats />
 
