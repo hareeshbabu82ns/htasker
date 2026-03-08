@@ -40,8 +40,9 @@ COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
 
 # Copy generated Prisma client for runtime
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder /app/node_modules/@prisma/client ./node_modules/@prisma/client
+COPY --from=builder /app/app/generated ./app/generated
+# COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+# COPY --from=builder /app/node_modules/@prisma/client ./node_modules/@prisma/client
 
 USER nextjs
 
