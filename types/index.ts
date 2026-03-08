@@ -1,18 +1,24 @@
-// Tracker Type Enum
-export enum TrackerType {
-  TIMER = "TIMER", // Start/stop with duration tracking
-  COUNTER = "COUNTER", // Increment/decrement tracking
-  AMOUNT = "AMOUNT", // Numerical value tracking (e.g. money)
-  OCCURRENCE = "OCCURRENCE", // Date-based event tracking
-  CUSTOM = "CUSTOM", // User-defined tracking
-}
+export const TRACKER_TYPE_VALUES = ["TIMER", "COUNTER", "AMOUNT", "OCCURRENCE", "CUSTOM"] as const;
 
-// Tracker Status Enum
-export enum TrackerStatus {
-  ACTIVE = "ACTIVE", // Currently running (for timers)
-  INACTIVE = "INACTIVE", // Not running but available
-  ARCHIVED = "ARCHIVED", // No longer in use
-}
+export type TrackerType = (typeof TRACKER_TYPE_VALUES)[number];
+
+export const TrackerType = {
+  TIMER: TRACKER_TYPE_VALUES[0],
+  COUNTER: TRACKER_TYPE_VALUES[1],
+  AMOUNT: TRACKER_TYPE_VALUES[2],
+  OCCURRENCE: TRACKER_TYPE_VALUES[3],
+  CUSTOM: TRACKER_TYPE_VALUES[4],
+} as const;
+
+export const TRACKER_STATUS_VALUES = ["ACTIVE", "INACTIVE", "ARCHIVED"] as const;
+
+export type TrackerStatus = (typeof TRACKER_STATUS_VALUES)[number];
+
+export const TrackerStatus = {
+  ACTIVE: TRACKER_STATUS_VALUES[0],
+  INACTIVE: TRACKER_STATUS_VALUES[1],
+  ARCHIVED: TRACKER_STATUS_VALUES[2],
+} as const;
 
 // User Interface
 export interface User {
@@ -75,12 +81,12 @@ export type TrackerState =
 
 // Type guard for TrackerType
 export function isTrackerType(value: unknown): value is TrackerType {
-  return Object.values(TrackerType).includes(value as TrackerType);
+  return TRACKER_TYPE_VALUES.includes(value as TrackerType);
 }
 
 // Type guard for TrackerStatus
 export function isTrackerStatus(value: unknown): value is TrackerStatus {
-  return Object.values(TrackerStatus).includes(value as TrackerStatus);
+  return TRACKER_STATUS_VALUES.includes(value as TrackerStatus);
 }
 
 // Form-related types
@@ -103,9 +109,7 @@ export type TrackerEntryFormValues = {
 };
 
 // API Response types
-export type ApiResponse<T> =
-  | { success: true; data: T }
-  | { success: false; error: string };
+export type ApiResponse<T> = { success: true; data: T } | { success: false; error: string };
 
 export type ApiError =
   | { code: "UNAUTHORIZED"; message: string }

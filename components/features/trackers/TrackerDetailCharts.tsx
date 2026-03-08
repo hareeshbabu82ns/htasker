@@ -12,25 +12,19 @@ const TrackerStatsChart = dynamic(
   }
 );
 
-const TrendChart = dynamic(
-  () => import("@/components/features/trackers/TrendChart"),
-  {
-    ssr: false,
-    loading: () => <Skeleton className="h-64 w-full rounded-lg" />,
-  }
-);
+const TrendChart = dynamic(() => import("@/components/features/trackers/TrendChart"), {
+  ssr: false,
+  loading: () => <Skeleton className="h-64 w-full rounded-lg" />,
+});
 
-const CalendarHeatmap = dynamic(
-  () => import("@/components/features/trackers/CalendarHeatmap"),
-  {
-    ssr: false,
-    loading: () => <Skeleton className="h-64 w-full rounded-lg" />,
-  }
-);
+const CalendarHeatmap = dynamic(() => import("@/components/features/trackers/CalendarHeatmap"), {
+  ssr: false,
+  loading: () => <Skeleton className="h-64 w-full rounded-lg" />,
+});
 
 interface TrackerDetailChartsProps {
   trackerId: string;
-  trackerType: string;
+  trackerType: Tracker["type"];
   tracker: Tracker;
 }
 

@@ -70,7 +70,7 @@ export default async function OccurrencePage({ searchParams }: OccurrencePagePro
             <p className="text-muted-foreground text-sm">Track recurring events and habits</p>
           </div>
         </div>
-        <Link href="/trackers/new?type=OCCURRENCE" passHref>
+        <Link href="/trackers/new?type=OCCURRENCE">
           <Button>Create Occurrence Tracker</Button>
         </Link>
       </div>

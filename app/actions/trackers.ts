@@ -2,9 +2,14 @@
 
 import { z } from "zod";
 import prisma from "@/lib/db/prisma";
-import { TrackerStatus, TrackerType } from "@/types";
+import {
+  TRACKER_STATUS_VALUES,
+  TRACKER_TYPE_VALUES,
+  Tracker,
+  TrackerStatus,
+  TrackerType,
+} from "@/types";
 import { revalidatePath } from "next/cache";
-import { Tracker } from "../generated/prisma";
 import { auth } from "@/auth";
 
 async function requireUserId(): Promise<string> {
@@ -29,17 +34,14 @@ export type TrackerStatistics = {
 
 // Validation schema for creating/updating a tracker
 const TrackerSchema = z.object({
-  name: z
-    .string()
-    .min(1, "Name is required")
-    .max(50, "Name cannot exceed 50 characters"),
+  name: z.string().min(1, "Name is required").max(50, "Name cannot exceed 50 characters"),
   description: z
     .string()
     .max(200, "Description cannot exceed 200 characters")
     .optional()
     .nullable(),
-  type: z.enum(TrackerType),
-  status: z.enum(TrackerStatus).optional(),
+  type: z.enum(TRACKER_TYPE_VALUES),
+  status: z.enum(TRACKER_STATUS_VALUES).optional(),
   tags: z.array(z.string()).optional().default([]),
   color: z
     .string()
@@ -95,9 +97,7 @@ export async function createTracker(
     if (error instanceof z.ZodError) {
       return {
         success: false,
-        error: `Validation failed: ${error.issues
-          .map((e) => e.message)
-          .join(", ")}`,
+        error: `Validation failed: ${error.issues.map((e) => e.message).join(", ")}`,
       };
     }
 
@@ -108,9 +108,7 @@ export async function createTracker(
 /**
  * Get a tracker by ID
  */
-export async function getTracker(
-  id: string
-): Promise<TrackerActionResponse<unknown>> {
+export async function getTracker(id: string): Promise<TrackerActionResponse<unknown>> {
   try {
     const userId = await requireUserId();
 
@@ -176,9 +174,7 @@ export async function updateTracker(
     if (error instanceof z.ZodError) {
       return {
         success: false,
-        error: `Validation failed: ${error.issues
-          .map((e) => e.message)
-          .join(", ")}`,
+        error: `Validation failed: ${error.issues.map((e) => e.message).join(", ")}`,
       };
     }
 
@@ -189,9 +185,7 @@ export async function updateTracker(
 /**
  * Delete a tracker
  */
-export async function deleteTracker(
-  id: string
-): Promise<TrackerActionResponse<{ id: string }>> {
+export async function deleteTracker(id: string): Promise<TrackerActionResponse<{ id: string }>> {
   try {
     const userId = await requireUserId();
 
@@ -220,9 +214,7 @@ export async function deleteTracker(
 /**
  * Duplicate a tracker (clone with fresh statistics)
  */
-export async function duplicateTracker(
-  id: string
-): Promise<TrackerActionResponse<{ id: string }>> {
+export async function duplicateTracker(id: string): Promise<TrackerActionResponse<{ id: string }>> {
   try {
     const userId = await requireUserId();
 
@@ -447,9 +439,7 @@ export async function getTrackers(filters?: {
 /**
  * Pin a tracker (mark as favourite)
  */
-export async function pinTracker(
-  id: string
-): Promise<TrackerActionResponse<{ id: string }>> {
+export async function pinTracker(id: string): Promise<TrackerActionResponse<{ id: string }>> {
   try {
     const userId = await requireUserId();
 
@@ -478,9 +468,7 @@ export async function pinTracker(
 /**
  * Unpin a tracker (remove from favourites)
  */
-export async function unpinTracker(
-  id: string
-): Promise<TrackerActionResponse<{ id: string }>> {
+export async function unpinTracker(id: string): Promise<TrackerActionResponse<{ id: string }>> {
   try {
     const userId = await requireUserId();
 
@@ -569,9 +557,7 @@ export async function setTrackerGoal(
 /**
  * Clear goal settings from a tracker
  */
-export async function clearTrackerGoal(
-  id: string
-): Promise<TrackerActionResponse<{ id: string }>> {
+export async function clearTrackerGoal(id: string): Promise<TrackerActionResponse<{ id: string }>> {
   try {
     const userId = await requireUserId();
 

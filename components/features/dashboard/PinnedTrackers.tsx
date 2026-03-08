@@ -1,55 +1,53 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
-import { getTrackers, TrackerWithEntriesCount } from '@/app/actions/trackers';
-import { Pin, RefreshCw } from 'lucide-react';
-import TrackerCard from '@/components/features/trackers/TrackerCard';
-import { useEffect, useState, useCallback } from 'react';
-import { TrackerStatus } from '@/types';
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { getTrackers, TrackerWithEntriesCount } from "@/app/actions/trackers";
+import { Pin, RefreshCw } from "lucide-react";
+import TrackerCard from "@/components/features/trackers/TrackerCard";
+import { useEffect, useState, useCallback } from "react";
+import { TrackerStatus } from "@/types";
 
 export default function PinnedTrackers() {
-  const [ pinnedTrackers, setPinnedTrackers ] = useState<TrackerWithEntriesCount[]>( [] );
-  const [ isLoading, setIsLoading ] = useState( true );
+  const [pinnedTrackers, setPinnedTrackers] = useState<TrackerWithEntriesCount[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const fetchPinnedTrackers = useCallback( async () => {
-    setIsLoading( true );
+  const fetchPinnedTrackers = useCallback(async () => {
+    setIsLoading(true);
     try {
-      const response = await getTrackers( { pinned: true, limit: 100 } );
-      if ( response.success ) {
+      const response = await getTrackers({ pinned: true, limit: 100 });
+      if (response.success) {
         // Exclude archived trackers
-        const active = response.data.trackers.filter(
-          ( t ) => t.status !== TrackerStatus.ARCHIVED
-        );
-        setPinnedTrackers( active );
+        const active = response.data.trackers.filter((t) => t.status !== TrackerStatus.ARCHIVED);
+        setPinnedTrackers(active);
       } else {
-        setPinnedTrackers( [] );
+        setPinnedTrackers([]);
       }
-    } catch ( error ) {
-      console.error( 'Failed to fetch pinned trackers:', error );
-      setPinnedTrackers( [] );
+    } catch (error) {
+      console.error("Failed to fetch pinned trackers:", error);
+      setPinnedTrackers([]);
     } finally {
-      setIsLoading( false );
+      setIsLoading(false);
     }
-  }, [] );
+  }, []);
 
-  useEffect( () => {
+  useEffect(() => {
     fetchPinnedTrackers();
-  }, [ fetchPinnedTrackers ] );
+  }, [fetchPinnedTrackers]);
 
   // Re-fetch when any TrackerCard signals a pin change
-  useEffect( () => {
+  useEffect(() => {
     const handler = () => fetchPinnedTrackers();
-    window.addEventListener( 'pinned-trackers-changed', handler );
-    return () => window.removeEventListener( 'pinned-trackers-changed', handler );
-  }, [ fetchPinnedTrackers ] );
+    window.addEventListener("pinned-trackers-changed", handler);
+    return () => window.removeEventListener("pinned-trackers-changed", handler);
+  }, [fetchPinnedTrackers]);
 
   return (
     <section className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Pin className="h-5 w-5 text-primary" />
+          <Pin className="text-primary h-5 w-5" />
           <h2 className="text-xl font-semibold">Pinned Trackers</h2>
         </div>
         <Button
@@ -60,7 +58,7 @@ export default function PinnedTrackers() {
           aria-label="Refresh pinned trackers"
           className="h-8 w-8"
         >
-          <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
         </Button>
       </div>
 
@@ -72,17 +70,19 @@ export default function PinnedTrackers() {
             ))}
           </div>
         ) : pinnedTrackers.length > 0 ? (
-          pinnedTrackers.map( ( tracker ) => (
+          pinnedTrackers.map((tracker) => (
             <TrackerCard key={tracker.id} tracker={tracker} showEdit />
-          ) )
+          ))
         ) : (
-          <div className="bg-background border border-dashed border-border rounded-lg p-6 text-center">
-            <Pin className="h-8 w-8 text-foreground/30 mx-auto mb-2" />
-            <p className="text-sm text-foreground/60">
+          <div className="bg-background border-border rounded-lg border border-dashed p-6 text-center">
+            <Pin className="text-foreground/30 mx-auto mb-2 h-8 w-8" />
+            <p className="text-foreground/60 text-sm">
               Pin trackers from the tracker card menu to see them here
             </p>
-            <Link href="/trackers" passHref className="mt-3 inline-block">
-              <Button variant="outline" size="sm">Browse Trackers</Button>
+            <Link href="/trackers" className="mt-3 inline-block">
+              <Button variant="outline" size="sm">
+                Browse Trackers
+              </Button>
             </Link>
           </div>
         )}

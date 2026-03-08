@@ -1,62 +1,63 @@
 "use client";
 
+import type { FormEvent, SVGProps } from "react";
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 
+interface IconProps extends SVGProps<SVGSVGElement> {
+  className?: string;
+}
+
 export default function LoginPage() {
-  const [ email, setEmail ] = useState( "" );
-  const [ password, setPassword ] = useState( "" );
-  const [ isLoading, setIsLoading ] = useState( false );
-  const [ error, setError ] = useState( "" );
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
   const router = useRouter();
 
-  const handleSubmit = async ( e: React.FormEvent ) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setIsLoading( true );
-    setError( "" );
+    setIsLoading(true);
+    setError("");
 
     try {
-      const result = await signIn( "credentials", {
+      const result = await signIn("credentials", {
         email,
         password,
         redirect: false,
-      } );
+      });
 
-      if ( result?.error ) {
-        setError( "Invalid email or password. Please try again." );
+      if (result?.error) {
+        setError("Invalid email or password. Please try again.");
       } else {
-        router.push( "/dashboard" );
+        router.push("/dashboard");
         router.refresh();
       }
     } catch {
-      setError( "Sign in failed. Please try again." );
+      setError("Sign in failed. Please try again.");
     } finally {
-      setIsLoading( false );
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-background">
-      <div className="w-full max-w-md space-y-8 bg-background border border-border p-6 rounded-lg shadow-sm">
+    <div className="bg-background flex min-h-screen items-center justify-center p-4">
+      <div className="bg-background border-border w-full max-w-md space-y-8 rounded-lg border p-6 shadow-sm">
         <div className="text-center">
           <h1 className="text-2xl font-bold">Sign in to HTracker</h1>
-          <p className="mt-2 text-foreground/70">
-            Enter your credentials to access your account
-          </p>
+          <p className="text-foreground/70 mt-2">Enter your credentials to access your account</p>
         </div>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-md">
-            {error}
-          </div>
+          <div className="rounded-md border border-red-200 bg-red-50 p-3 text-red-700">{error}</div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label htmlFor="email" className="block text-sm font-medium mb-1">
+            <label htmlFor="email" className="mb-1 block text-sm font-medium">
               Email address
             </label>
             <input
@@ -66,19 +67,19 @@ export default function LoginPage() {
               autoComplete="email"
               required
               value={email}
-              onChange={( e ) => setEmail( e.target.value )}
-              className="w-full border border-border rounded-md p-2 focus:ring-2 focus:ring-primary focus:border-primary"
+              onChange={(e) => setEmail(e.target.value)}
+              className="border-border focus:ring-primary focus:border-primary w-full rounded-md border p-2 focus:ring-2"
             />
           </div>
 
           <div>
-            <div className="flex items-center justify-between mb-1">
+            <div className="mb-1 flex items-center justify-between">
               <label htmlFor="password" className="block text-sm font-medium">
                 Password
               </label>
               <Link
                 href="/auth/reset-password"
-                className="text-sm text-primary hover:text-primary-hover"
+                className="text-primary hover:text-primary-hover text-sm"
               >
                 Forgot your password?
               </Link>
@@ -90,18 +91,13 @@ export default function LoginPage() {
               autoComplete="current-password"
               required
               value={password}
-              onChange={( e ) => setPassword( e.target.value )}
-              className="w-full border border-border rounded-md p-2 focus:ring-2 focus:ring-primary focus:border-primary"
+              onChange={(e) => setPassword(e.target.value)}
+              className="border-border focus:ring-primary focus:border-primary w-full rounded-md border p-2 focus:ring-2"
             />
           </div>
 
           <div>
-            <Button
-              type="submit"
-              fullWidth
-              disabled={isLoading}
-              className="relative"
-            >
+            <Button type="submit" disabled={isLoading} className="relative">
               {isLoading ? "Signing in..." : "Sign in"}
             </Button>
           </div>
@@ -109,10 +105,7 @@ export default function LoginPage() {
           <div className="flex items-center justify-center">
             <div className="text-sm">
               Don't have an account?{" "}
-              <Link
-                href="/register"
-                className="text-primary hover:text-primary-hover font-medium"
-              >
+              <Link href="/register" className="text-primary hover:text-primary-hover font-medium">
                 Sign up
               </Link>
             </div>
@@ -122,30 +115,28 @@ export default function LoginPage() {
         <div className="mt-6">
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-border"></div>
+              <div className="border-border w-full border-t"></div>
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-background text-foreground/70">
-                Or continue with
-              </span>
+              <span className="bg-background text-foreground/70 px-2">Or continue with</span>
             </div>
           </div>
 
           <div className="mt-6 grid grid-cols-2 gap-3">
             <button
               type="button"
-              onClick={() => signIn( "google", { callbackUrl: "/dashboard" } )}
-              className="flex justify-center items-center w-full border border-border rounded-md p-2 hover:bg-muted"
+              onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
+              className="border-border hover:bg-muted flex w-full items-center justify-center rounded-md border p-2"
             >
-              <GoogleIcon className="h-5 w-5 mr-2" />
+              <GoogleIcon className="mr-2 h-5 w-5" />
               <span>Google</span>
             </button>
             <button
               type="button"
-              onClick={() => signIn( "github", { callbackUrl: "/dashboard" } )}
-              className="flex justify-center items-center w-full border border-border rounded-md p-2 hover:bg-muted"
+              onClick={() => signIn("github", { callbackUrl: "/dashboard" })}
+              className="border-border hover:bg-muted flex w-full items-center justify-center rounded-md border p-2"
             >
-              <GithubIcon className="h-5 w-5 mr-2" />
+              <GithubIcon className="mr-2 h-5 w-5" />
               <span>GitHub</span>
             </button>
           </div>
@@ -155,13 +146,9 @@ export default function LoginPage() {
   );
 }
 
-function GoogleIcon( { className = "" } ) {
+function GoogleIcon({ className = "" }: IconProps) {
   return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      className={className}
-    >
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className={className}>
       <path
         d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
         fill="#4285F4"
@@ -182,7 +169,7 @@ function GoogleIcon( { className = "" } ) {
   );
 }
 
-function GithubIcon( { className = "" } ) {
+function GithubIcon({ className = "" }: IconProps) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"

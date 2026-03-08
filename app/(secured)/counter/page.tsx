@@ -72,7 +72,7 @@ export default async function CounterPage({ searchParams }: CounterPageProps) {
             </p>
           </div>
         </div>
-        <Link href="/trackers/new?type=COUNTER" passHref>
+        <Link href="/trackers/new?type=COUNTER">
           <Button>Create Counter Tracker</Button>
         </Link>
       </div>

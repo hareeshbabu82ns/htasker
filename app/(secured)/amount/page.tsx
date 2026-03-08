@@ -72,7 +72,7 @@ export default async function AmountPage({ searchParams }: AmountPageProps) {
             </p>
           </div>
         </div>
-        <Link href="/trackers/new?type=AMOUNT" passHref>
+        <Link href="/trackers/new?type=AMOUNT">
           <Button>Create Amount Tracker</Button>
         </Link>
       </div>

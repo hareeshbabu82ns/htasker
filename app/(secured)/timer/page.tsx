@@ -72,7 +72,7 @@ export default async function TimerPage({ searchParams }: TimerPageProps) {
             </p>
           </div>
         </div>
-        <Link href="/trackers/new?type=TIMER" passHref>
+        <Link href="/trackers/new?type=TIMER">
           <Button>Create Timer Tracker</Button>
         </Link>
       </div>

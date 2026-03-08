@@ -9,19 +9,14 @@ import GoalForm from "@/components/features/trackers/GoalForm";
 import GoalProgress from "@/components/features/trackers/GoalProgress";
 import TrackerDetailCharts from "@/components/features/trackers/TrackerDetailCharts";
 
-export default async function TrackerDetailPage( {
-  params,
-}: {
-  params: Promise<{ id: string }>;
-} ) {
-
+export default async function TrackerDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = await params;
 
   // Fetch the tracker by ID
-  const response = await getTracker( resolvedParams.id );
+  const response = await getTracker(resolvedParams.id);
 
   // Handle not found
-  if ( !response.success ) {
+  if (!response.success) {
     return notFound();
   }
 
@@ -30,11 +25,11 @@ export default async function TrackerDetailPage( {
   return (
     <div className="space-y-6">
       {/* Header with actions */}
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <Link
             href="/trackers"
-            className="text-sm text-foreground/70 hover:text-foreground flex items-center gap-1"
+            className="text-foreground/70 hover:text-foreground flex items-center gap-1 text-sm"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -42,7 +37,7 @@ export default async function TrackerDetailPage( {
               viewBox="0 0 24 24"
               strokeWidth={1.5}
               stroke="currentColor"
-              className="w-4 h-4"
+              className="h-4 w-4"
             >
               <path
                 strokeLinecap="round"
@@ -52,11 +47,11 @@ export default async function TrackerDetailPage( {
             </svg>
             Back to trackers
           </Link>
-          <h1 className="text-2xl font-semibold mt-1">Tracker Details</h1>
+          <h1 className="mt-1 text-2xl font-semibold">Tracker Details</h1>
         </div>
 
         <div className="flex gap-2">
-          <Link href={`/trackers/${resolvedParams.id}/edit`} passHref>
+          <Link href={`/trackers/${resolvedParams.id}/edit`}>
             <Button variant="outline">Edit</Button>
           </Link>
           <DeleteTrackerButton trackerId={resolvedParams.id} />
@@ -64,31 +59,29 @@ export default async function TrackerDetailPage( {
       </div>
 
       {/* Tracker status indicator */}
-      <div className="bg-background border border-border p-4 rounded-lg">
-        <div className="flex justify-between items-center">
+      <div className="bg-background border-border rounded-lg border p-4">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div
-              className={`w-2 h-2 rounded-full ${tracker.status === "ACTIVE"
-                ? "bg-green-500"
-                : tracker.status === "INACTIVE"
-                  ? "bg-yellow-500"
-                  : "bg-gray-500"
-                }`}
+              className={`h-2 w-2 rounded-full ${
+                tracker.status === "ACTIVE"
+                  ? "bg-green-500"
+                  : tracker.status === "INACTIVE"
+                    ? "bg-yellow-500"
+                    : "bg-gray-500"
+              }`}
             ></div>
             <span className="text-sm font-medium">
               {tracker.status === "ACTIVE"
                 ? "Active"
                 : tracker.status === "INACTIVE"
                   ? "Inactive"
-                  : "Archived"
-              }
+                  : "Archived"}
             </span>
           </div>
 
-          <div className="flex items-center text-sm text-foreground/70">
-            <span>
-              Last updated: {new Date( tracker.updatedAt ).toLocaleDateString()}
-            </span>
+          <div className="text-foreground/70 flex items-center text-sm">
+            <span>Last updated: {new Date(tracker.updatedAt).toLocaleDateString()}</span>
           </div>
         </div>
       </div>
@@ -101,7 +94,7 @@ export default async function TrackerDetailPage( {
       />
 
       {/* Goal setting and progress */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         <GoalForm tracker={tracker} />
         {tracker.goalEnabled && <GoalProgress tracker={tracker} />}
       </div>

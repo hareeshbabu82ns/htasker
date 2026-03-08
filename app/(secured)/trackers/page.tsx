@@ -9,11 +9,11 @@ import Pagination from "@/components/features/trackers/Pagination";
 
 const PAGE_LIMIT_DEFAULT = 10;
 
-export default async function TrackersPage( {
+export default async function TrackersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ [ key: string ]: string | string[] | undefined | unknown }>;
-} ) {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined | unknown }>;
+}) {
   const resolvedSearchParams = await searchParams;
 
   // Get filter parameters from URL search params
@@ -24,21 +24,21 @@ export default async function TrackersPage( {
 
   // Get pagination parameters from URL search params
   const currentPage = resolvedSearchParams.page
-    ? parseInt( resolvedSearchParams.page as string, 10 )
+    ? parseInt(resolvedSearchParams.page as string, 10)
     : 1;
   const limit = resolvedSearchParams.limit
-    ? parseInt( resolvedSearchParams.limit as string, 10 )
+    ? parseInt(resolvedSearchParams.limit as string, 10)
     : PAGE_LIMIT_DEFAULT;
 
   // Pass filters and pagination params to getTrackers
-  const response = await getTrackers( {
+  const response = await getTrackers({
     status: statusFilter,
     type: typeFilter,
     search: searchQuery,
     sort: sortOrder,
     page: currentPage,
     limit: limit,
-  } );
+  });
 
   // Extract data from the response
   let trackers: TrackerWithEntriesCount[] = [];
@@ -46,7 +46,7 @@ export default async function TrackersPage( {
   let total = 0;
   let page = 1;
 
-  if ( response.success ) {
+  if (response.success) {
     trackers = response.data.trackers;
     totalPages = response.data.totalPages;
     total = response.data.total;
@@ -57,11 +57,11 @@ export default async function TrackersPage( {
   const createBaseUrl = () => {
     const params = new URLSearchParams();
 
-    if ( statusFilter ) params.set( "status", statusFilter );
-    if ( typeFilter ) params.set( "type", typeFilter );
-    if ( searchQuery ) params.set( "q", searchQuery );
-    if ( sortOrder ) params.set( "sort", sortOrder );
-    if ( limit !== 10 ) params.set( "limit", limit.toString() );
+    if (statusFilter) params.set("status", statusFilter);
+    if (typeFilter) params.set("type", typeFilter);
+    if (searchQuery) params.set("q", searchQuery);
+    if (sortOrder) params.set("sort", sortOrder);
+    if (limit !== 10) params.set("limit", limit.toString());
 
     return params;
   };
@@ -71,18 +71,18 @@ export default async function TrackersPage( {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-semibold">All Trackers</h1>
         <div className="flex items-center gap-2">
-          <Link href="/trackers/compare" passHref>
+          <Link href="/trackers/compare">
             <Button variant="outline" asChild>
               <span className="flex items-center gap-1.5">
-                <BarChart2 className="w-4 h-4" />
+                <BarChart2 className="h-4 w-4" />
                 Compare
               </span>
             </Button>
           </Link>
-          <Link href="/trackers/new" passHref>
+          <Link href="/trackers/new">
             <Button>Create New Tracker</Button>
           </Link>
         </div>
@@ -100,9 +100,10 @@ export default async function TrackersPage( {
       <div className="space-y-4">
         {trackers.length > 0 ? (
           <>
-            <div className="flex items-center justify-between mb-4">
-              <div className="text-sm text-muted-foreground">
-                Showing {page * limit - limit + 1} to {Math.min( page * limit, total )} of {total} trackers
+            <div className="mb-4 flex items-center justify-between">
+              <div className="text-muted-foreground text-sm">
+                Showing {page * limit - limit + 1} to {Math.min(page * limit, total)} of {total}{" "}
+                trackers
               </div>
               {/* Pagination controls */}
               <div className="flex items-center gap-4">
@@ -120,9 +121,10 @@ export default async function TrackersPage( {
             <TrackerListClient trackers={trackers} />
 
             {/* Bottom pagination controls */}
-            <div className="flex items-center justify-between mb-4">
-              <div className="text-sm text-muted-foreground">
-                Showing {page * limit - limit + 1} to {Math.min( page * limit, total )} of {total} trackers
+            <div className="mb-4 flex items-center justify-between">
+              <div className="text-muted-foreground text-sm">
+                Showing {page * limit - limit + 1} to {Math.min(page * limit, total)} of {total}{" "}
+                trackers
               </div>
               {totalPages > 1 && (
                 <Pagination
@@ -135,7 +137,7 @@ export default async function TrackersPage( {
             </div>
           </>
         ) : (
-          <div className="bg-background border border-border rounded-lg p-6 text-center">
+          <div className="bg-background border-border rounded-lg border p-6 text-center">
             <p className="text-foreground/70">No trackers found</p>
             <Link href="/trackers/new" className="mt-2 inline-block">
               <Button variant="outline" size="sm">
