@@ -15,39 +15,33 @@ interface LimitSelectorProps {
   baseUrl: string; // Base URL for creating limit URLs
 }
 
-export default function LimitSelector( {
-  currentLimit,
-  limitOptions,
-  baseUrl,
-}: LimitSelectorProps ) {
+export default function LimitSelector({ currentLimit, limitOptions, baseUrl }: LimitSelectorProps) {
   const router = useRouter();
 
-  const handleValueChange = ( value: string ) => {
-    const newLimit = parseInt( value, 10 );
-    // Create the URL on the client side
-    const params = new URLSearchParams( baseUrl );
-    params.set( "limit", newLimit.toString() );
+  const handleValueChange = (value: string) => {
+    const newLimit = parseInt(value, 10);
+    // Create the URL on the client side - parse only the query string portion
+    const [basePath, queryString] = baseUrl.split("?");
+    const params = new URLSearchParams(queryString || "");
+    params.set("limit", newLimit.toString());
 
     // Remove any page parameter to reset to first page when changing limit
-    params.delete( "page" );
+    params.delete("page");
 
-    router.push( `/trackers?${params.toString()}` );
+    router.push(`${basePath}?${params.toString()}`);
   };
 
   return (
-    <Select
-      value={currentLimit.toString()}
-      onValueChange={handleValueChange}
-    >
+    <Select value={currentLimit.toString()} onValueChange={handleValueChange}>
       <SelectTrigger className="w-[70px]">
         <SelectValue placeholder="Limit" />
       </SelectTrigger>
       <SelectContent>
-        {limitOptions.map( ( option ) => (
+        {limitOptions.map((option) => (
           <SelectItem key={option} value={option.toString()}>
             {option}
           </SelectItem>
-        ) )}
+        ))}
       </SelectContent>
     </Select>
   );

@@ -3,7 +3,7 @@
 import { z } from "zod";
 import bcrypt from "bcrypt";
 import { prisma } from "@/lib/db/prisma";
-import { auth } from "@/auth";
+import { auth, signOut } from "@/auth";
 import { revalidatePath } from "next/cache";
 
 export type AuthActionResponse<T = unknown> =
@@ -13,10 +13,7 @@ export type AuthActionResponse<T = unknown> =
 const RegisterSchema = z.object({
   name: z.string().min(1, "Name is required").max(100).optional(),
   email: z.string().email("Invalid email address"),
-  password: z
-    .string()
-    .min(8, "Password must be at least 8 characters")
-    .max(100),
+  password: z.string().min(8, "Password must be at least 8 characters").max(100),
 });
 
 export type RegisterInput = z.infer<typeof RegisterSchema>;
@@ -103,4 +100,11 @@ export async function updateUserProfile(
     console.error("Error updating profile:", error);
     return { success: false, error: "Failed to update profile" };
   }
+}
+
+/**
+ * Sign out the currently authenticated user and redirect to login
+ */
+export async function logout(): Promise<void> {
+  await signOut({ redirectTo: "/login" });
 }
