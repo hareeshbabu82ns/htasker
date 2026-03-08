@@ -1,0 +1,32 @@
+# Dependency directories
+node_modules/
+.pnp
+.pnp.js
+
+# Next.js build output
+.next/
+out/
+dist/
+build/
+
+# Generated files
+app/generated/
+prisma/generated/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Lock files (let linters handle these)
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Static assets
+public/
+
+# Misc
+*.min.js
+*.min.css
+tsconfig.tsbuildinfo

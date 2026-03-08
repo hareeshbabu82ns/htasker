@@ -28,12 +28,20 @@ export default function AppLayout( { children }: AppLayoutProps ) {
   return (
     <QueryClientProvider client={queryClient}>
       <ServiceWorkerRegistration />
+      {/* Skip-to-content link for keyboard users */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-primary focus:text-primary-foreground focus:rounded-md focus:outline-none"
+      >
+        Skip to main content
+      </a>
       <div className="flex h-screen bg-background">
         {/* Mobile sidebar backdrop */}
         {sidebarOpen && (
           <div
             className="fixed inset-0 z-10 bg-black/50 lg:hidden"
             onClick={() => setSidebarOpen( false )}
+            aria-hidden="true"
           ></div>
         )}
 
@@ -41,6 +49,8 @@ export default function AppLayout( { children }: AppLayoutProps ) {
         <aside
           className={`fixed inset-y-0 left-0 z-20 w-64 transform bg-background border-r border-border transition-transform duration-200 lg:static lg:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"
             }`}
+          aria-label="Main navigation"
+          id="sidebar"
         >
           {/* Sidebar header */}
           <div className="flex h-16 items-center justify-between px-4 border-b border-border">
@@ -50,7 +60,7 @@ export default function AppLayout( { children }: AppLayoutProps ) {
             <button
               onClick={() => setSidebarOpen( false )}
               className="rounded-md p-2 text-foreground hover:bg-muted lg:hidden"
-              aria-label="Close sidebar"
+              aria-label="Close navigation menu"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -59,6 +69,7 @@ export default function AppLayout( { children }: AppLayoutProps ) {
                 strokeWidth={1.5}
                 stroke="currentColor"
                 className="w-6 h-6"
+                aria-hidden="true"
               >
                 <path
                   strokeLinecap="round"
@@ -70,7 +81,7 @@ export default function AppLayout( { children }: AppLayoutProps ) {
           </div>
 
           {/* Sidebar navigation */}
-          <nav className="flex flex-col p-4 space-y-1">
+          <nav className="flex flex-col p-4 space-y-1" aria-label="Primary navigation">
             <NavItem
               href="/dashboard"
               icon={<DashboardIcon />}
@@ -131,12 +142,14 @@ export default function AppLayout( { children }: AppLayoutProps ) {
         {/* Main content */}
         <div className="flex flex-1 flex-col overflow-hidden">
           {/* Header */}
-          <header className="flex h-16 items-center justify-between border-b border-border px-4 lg:px-6">
+          <header className="flex h-16 items-center justify-between border-b border-border px-4 lg:px-6" role="banner">
             {/* Mobile menu button */}
             <button
               onClick={() => setSidebarOpen( true )}
               className="rounded-md p-2 text-foreground hover:bg-muted lg:hidden"
-              aria-label="Open sidebar"
+              aria-label="Open navigation menu"
+              aria-controls="sidebar"
+              aria-expanded={sidebarOpen}
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -145,6 +158,7 @@ export default function AppLayout( { children }: AppLayoutProps ) {
                 strokeWidth={1.5}
                 stroke="currentColor"
                 className="w-6 h-6"
+                aria-hidden="true"
               >
                 <path
                   strokeLinecap="round"
@@ -171,6 +185,7 @@ export default function AppLayout( { children }: AppLayoutProps ) {
                   strokeWidth={1.5}
                   stroke="currentColor"
                   className="w-6 h-6"
+                  aria-hidden="true"
                 >
                   <path
                     strokeLinecap="round"
@@ -190,6 +205,7 @@ export default function AppLayout( { children }: AppLayoutProps ) {
                   strokeWidth={1.5}
                   stroke="currentColor"
                   className="w-6 h-6"
+                  aria-hidden="true"
                 >
                   <path
                     strokeLinecap="round"
@@ -202,7 +218,7 @@ export default function AppLayout( { children }: AppLayoutProps ) {
           </header>
 
           {/* Main content area */}
-          <main className="flex-1 overflow-auto p-4 pb-20 lg:p-6 md:pb-6">{children}</main>
+          <main id="main-content" className="flex-1 overflow-auto p-4 pb-20 lg:p-6 md:pb-6" tabIndex={-1}>{children}</main>
         </div>
         <BottomNav />
         <InstallPrompt />
@@ -224,12 +240,13 @@ function NavItem( { href, icon, label, isActive }: NavItemProps ) {
   return (
     <Link
       href={href}
+      aria-current={isActive ? "page" : undefined}
       className={`flex items-center px-3 py-2 rounded-md transition-colors ${isActive
           ? "bg-primary text-white"
           : "text-foreground hover:bg-muted hover:text-foreground"
         }`}
     >
-      <span className="mr-3">{icon}</span>
+      <span className="mr-3" aria-hidden="true">{icon}</span>
       <span>{label}</span>
     </Link>
   );

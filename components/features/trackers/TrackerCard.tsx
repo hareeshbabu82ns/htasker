@@ -323,8 +323,9 @@ export default function TrackerCard({ tracker, showLabel = false, showEdit = fal
               onClick={handleDecrement}
               disabled={isLoading}
               className="h-11 w-11"
+              aria-label={`Decrement ${tracker.name}`}
             >
-              <Minus className="h-4 w-4" />
+              <Minus className="h-4 w-4" aria-hidden="true" />
             </Button>
             <Button
               size="icon"
@@ -332,8 +333,9 @@ export default function TrackerCard({ tracker, showLabel = false, showEdit = fal
               onClick={handleIncrement}
               disabled={isLoading}
               className="h-11 w-11"
+              aria-label={`Increment ${tracker.name}`}
             >
-              <Plus className="h-4 w-4" />
+              <Plus className="h-4 w-4" aria-hidden="true" />
             </Button>
           </div>
         );
@@ -359,10 +361,10 @@ export default function TrackerCard({ tracker, showLabel = false, showEdit = fal
       case TrackerType.TIMER:
         return (
           <div>
-            <div className="text-lg text-secondary">
+            <div className="text-lg text-secondary" aria-live="off" aria-atomic="true">
               {formatDuration( tracker.statistics?.totalTime || 0 )}
               {isRunning && (
-                <span className="text-xs font-medium ml-1 mt-1 text-primary">
+                <span className="text-xs font-medium ml-1 mt-1 text-primary" aria-live="polite" aria-atomic="true" aria-label={`Elapsed: ${formatDuration( elapsedTime )}`}>
                   {formatDuration( elapsedTime )}
                 </span>
               )}
@@ -375,7 +377,12 @@ export default function TrackerCard({ tracker, showLabel = false, showEdit = fal
         const prefix = tracker.type === TrackerType.AMOUNT ? '$' : '';
         const displayValue = tracker.type === TrackerType.COUNTER ? counterValue : ( tracker.statistics?.totalValue ?? 0 );
         return (
-          <div className="text-lg text-secondary">
+          <div
+            className="text-lg text-secondary"
+            aria-live="polite"
+            aria-atomic="true"
+            aria-label={`${tracker.name} total: ${prefix}${displayValue}`}
+          >
             {prefix}{displayValue}
           </div>
         );
@@ -433,6 +440,7 @@ export default function TrackerCard({ tracker, showLabel = false, showEdit = fal
               backgroundColor: tracker.color || undefined,
               color: calculateContrastColor( tracker.color || "#000" )
             }}
+            aria-hidden="true"
           >
             {getTypeIcon( tracker.type )}
           </div>
@@ -472,7 +480,7 @@ export default function TrackerCard({ tracker, showLabel = false, showEdit = fal
           <div className="flex space-x-2 items-center">
             {tracker.status !== TrackerStatus.ARCHIVED && getActionButtons()}
             <Link href={`/trackers/${tracker.id}`} passHref>
-              <Button variant="ghost" size="icon" className="h-11 w-11"><EyeIcon /></Button>
+              <Button variant="ghost" size="icon" className="h-11 w-11" aria-label={`View ${tracker.name}`}><EyeIcon aria-hidden="true" /></Button>
             </Link>
             {showEdit && (
               <DropdownMenu>
