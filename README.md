@@ -1,4 +1,4 @@
-# HTasker
+# HTasker - Manage and Track any quantitative items
 
 ## Getting Started
 
