@@ -4,10 +4,16 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getTrackers, TrackerWithEntriesCount } from "@/app/actions/trackers";
-import { Pin, RefreshCw } from "lucide-react";
+import { BadgeDollarSign, CalendarRange, Clock3, Hash, Pin, Plus, RefreshCw } from "lucide-react";
 import TrackerCard from "@/components/features/trackers/TrackerCard";
 import { useEffect, useState, useCallback } from "react";
 import { TrackerStatus } from "@/types";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export default function PinnedTrackers() {
   const [pinnedTrackers, setPinnedTrackers] = useState<TrackerWithEntriesCount[]>([]);
@@ -48,18 +54,21 @@ export default function PinnedTrackers() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Pin className="text-primary h-5 w-5" />
-          <h2 className="text-xl font-semibold">Pinned Trackers</h2>
+          <h2 className="text-xl font-semibold">Pinned</h2>
         </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={fetchPinnedTrackers}
-          disabled={isLoading}
-          aria-label="Refresh pinned trackers"
-          className="h-8 w-8"
-        >
-          <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
-        </Button>
+        <div className="flex items-center space-x-2">
+          <QuickActionDropdownMenu />
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={fetchPinnedTrackers}
+            disabled={isLoading}
+            aria-label="Refresh pinned trackers"
+            className="h-8 w-8"
+          >
+            <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
+          </Button>
+        </div>
       </div>
 
       <div className="space-y-4">
@@ -88,5 +97,54 @@ export default function PinnedTrackers() {
         )}
       </div>
     </section>
+  );
+}
+
+function QuickActionDropdownMenu() {
+  const actions = [
+    {
+      title: "Timer",
+      description: "Track duration of activities",
+      href: "/trackers/new?type=TIMER",
+      icon: <Clock3 />,
+    },
+    {
+      title: "Counter",
+      description: "Track occurrences and quantities",
+      href: "/trackers/new?type=COUNTER",
+      icon: <Hash />,
+    },
+    {
+      title: "Amount",
+      description: "Track monetary values and expenses",
+      href: "/trackers/new?type=AMOUNT",
+      icon: <BadgeDollarSign />,
+    },
+    {
+      title: "Occurrence",
+      description: "Track date-based events",
+      href: "/trackers/new?type=OCCURRENCE",
+      icon: <CalendarRange />,
+    },
+  ];
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Quick actions">
+          <Plus className="size-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent>
+        {actions.map((action) => (
+          <DropdownMenuItem key={action.title} asChild>
+            <Link href={action.href} className="flex items-center gap-2">
+              {action.icon}
+              {action.title}
+            </Link>
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

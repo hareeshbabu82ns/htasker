@@ -1,13 +1,13 @@
-'use client';
+"use client";
 
-import { useCallback, useEffect, useState } from 'react';
-import { Activity, Clock, ListChecks, RefreshCw, Timer } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
-import { getTrackers } from '@/app/actions/trackers';
-import { formatDuration } from '@/lib/utils';
-import type { TrackerStatistics } from '@/app/actions/trackers';
+import { useCallback, useEffect, useState } from "react";
+import { Activity, Clock, ListChecks, RefreshCw, Timer } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { getTrackers } from "@/app/actions/trackers";
+import { formatDuration } from "@/lib/utils";
+import type { TrackerStatistics } from "@/app/actions/trackers";
 
 interface StatCardProps {
   title: string;
@@ -47,18 +47,18 @@ export default function SummaryStats() {
       if (!response.success) return;
 
       const { trackers } = response.data;
-      const nonArchived = trackers.filter((t) => t.status !== 'ARCHIVED');
+      const nonArchived = trackers.filter((t) => t.status !== "ARCHIVED");
 
       const totalTrackers = nonArchived.length;
       const activeTimers = nonArchived.filter(
-        (t) => t.type === 'TIMER' && t.status === 'ACTIVE'
+        (t) => t.type === "TIMER" && t.status === "ACTIVE"
       ).length;
       const totalEntries = nonArchived.reduce((sum, t) => {
         const s = t.statistics as TrackerStatistics | null;
         return sum + (s?.totalEntries ?? 0);
       }, 0);
       const totalTimeSeconds = nonArchived
-        .filter((t) => t.type === 'TIMER')
+        .filter((t) => t.type === "TIMER")
         .reduce((sum, t) => {
           const s = t.statistics as TrackerStatistics | null;
           return sum + (s?.totalTime ?? 0);
@@ -71,7 +71,7 @@ export default function SummaryStats() {
         totalTime: formatDuration(totalTimeSeconds),
       });
     } catch (error) {
-      console.error('Failed to fetch summary stats:', error);
+      console.error("Failed to fetch summary stats:", error);
     } finally {
       setIsLoading(false);
     }
@@ -93,18 +93,18 @@ export default function SummaryStats() {
           aria-label="Refresh summary stats"
           className="h-8 w-8"
         >
-          <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
         </Button>
       </div>
 
       {isLoading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {[...Array(4)].map((_, i) => (
             <Skeleton key={i} className="h-24 w-full rounded-lg" />
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard
             title="Total Trackers"
             value={stats?.totalTrackers ?? 0}
@@ -122,7 +122,7 @@ export default function SummaryStats() {
           />
           <StatCard
             title="Total Time"
-            value={stats?.totalTime ?? '0s'}
+            value={stats?.totalTime ?? "0s"}
             icon={<Clock className="h-4 w-4" />}
           />
         </div>

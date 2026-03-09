@@ -82,12 +82,14 @@ export default function TrackerCard({
     setCounterValue(tracker.statistics?.totalValue ?? 0);
   }, [tracker.statistics?.totalValue, tracker.id]);
 
-  // Check for active timer on component mount
+  // Check for active timer on mount and whenever the tracker is updated externally
+  // (e.g. timer started from the detail page updates tracker.updatedAt)
   useEffect(() => {
     if (tracker.type === TrackerType.TIMER && tracker.status !== TrackerStatus.ARCHIVED) {
       fetchActiveTimer();
     }
-  }, [tracker.id, tracker.type, tracker.status]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tracker.id, tracker.type, tracker.status, new Date(tracker.updatedAt).getTime()]);
 
   // Update timer display every second when running
   useEffect(() => {
@@ -106,9 +108,11 @@ export default function TrackerCard({
   const fetchActiveTimer = async () => {
     try {
       const response = await getEntriesByTracker(tracker.id, 5);
-      if (response.success && Array.isArray(response.data)) {
-        const entries = response.data as TrackerEntry[];
-        // Find entry with startTime but no endTime (or where they are the same - in progress)
+      if (response.success && response.data) {
+        const data = response.data as { entries: TrackerEntry[]; total: number };
+        const entries = data.entries ?? [];
+        // Find entry with startTime but no endTime (running), or where startTime === endTime
+        // (in-progress marker used by some mutation paths)
         const activeEntry = entries.find(
           (entry) =>
             entry.startTime &&
@@ -127,6 +131,11 @@ export default function TrackerCard({
             (now.getTime() - new Date(activeEntry.startTime!).getTime()) / 1000
           );
           setElapsedTime(diff);
+        } else {
+          // No active entry found — ensure local state reflects stopped state
+          setIsRunning(false);
+          setActiveEntryId(null);
+          setStartTime(null);
         }
       }
     } catch (error) {
@@ -328,23 +337,27 @@ export default function TrackerCard({
           <div className="flex space-x-2">
             {isRunning ? (
               <Button
-                size="sm"
-                variant="destructive"
+                size="icon"
+                variant="outline"
                 onClick={handleTimerStop}
                 disabled={isLoading || !activeEntryId}
-                className="h-11"
+                className="size-8"
+                title="Stop Timer"
+                aria-label="Stop Timer"
               >
-                <PauseCircle className="mr-1 h-4 w-4" /> Stop
+                <PauseCircle className="mr-1 size-4 text-red-500" />
               </Button>
             ) : (
               <Button
-                size="sm"
+                size="icon"
                 variant="outline"
                 onClick={handleTimerStart}
                 disabled={isLoading}
-                className="h-11"
+                className="size-8"
+                title="Start Timer"
+                aria-label="Start Timer"
               >
-                <PlayCircle className="mr-1 h-4 w-4" /> Start
+                <PlayCircle className="mr-1 size-4" />
               </Button>
             )}
           </div>
@@ -357,32 +370,34 @@ export default function TrackerCard({
               variant="outline"
               onClick={handleDecrement}
               disabled={isLoading}
-              className="h-11 w-11"
+              className="size-8"
               aria-label={`Decrement ${tracker.name}`}
             >
-              <Minus className="h-4 w-4" aria-hidden="true" />
+              <Minus className="size-4" aria-hidden="true" />
             </Button>
             <Button
               size="icon"
               variant="outline"
               onClick={handleIncrement}
               disabled={isLoading}
-              className="h-11 w-11"
+              className="size-8"
               aria-label={`Increment ${tracker.name}`}
             >
-              <Plus className="h-4 w-4" aria-hidden="true" />
+              <Plus className="size-4" aria-hidden="true" />
             </Button>
           </div>
         );
       case TrackerType.OCCURRENCE:
         return (
           <Button
-            size="sm"
+            size="icon"
             variant="outline"
             onClick={() => (window.location.href = `/trackers/${tracker.id}`)}
-            className="h-11"
+            className="size-8"
+            title="Log"
+            aria-label="Log"
           >
-            <Calendar className="mr-1 h-4 w-4" /> Log
+            <Calendar className="mr-1 size-4" />
           </Button>
         );
       default:
@@ -430,19 +445,29 @@ export default function TrackerCard({
           </div>
         );
       }
+      case TrackerType.CUSTOM:
       case TrackerType.OCCURRENCE:
         const lastOccurrence = tracker.updatedAt;
         const today = new Date();
         const diffTime = Math.abs(today.getTime() - new Date(lastOccurrence).getTime());
         const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+        const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
+        const diffMinutes = Math.floor(diffTime / (1000 * 60));
+        const diffSeconds = Math.floor(diffTime / 1000);
 
         return (
           <div className="text-secondary text-lg">
-            {diffDays === 0 ? "Logged today" : `${diffDays} days since last occurrence`}
+            {diffDays === 0
+              ? diffHours === 0
+                ? diffMinutes === 0
+                  ? `${diffSeconds}s ago`
+                  : `${diffMinutes}m ago`
+                : `${diffHours}h ago`
+              : `${diffDays}d ago`}
           </div>
         );
       default:
-        return null;
+        return <div></div>;
     }
   };
 
@@ -473,8 +498,8 @@ export default function TrackerCard({
             : undefined
         }
       >
-        <div className="flex items-start justify-between">
-          <div className="flex items-start space-x-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex min-w-0 items-start space-x-3">
             {isSelected !== undefined && (
               <div className="mt-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                 <Checkbox
@@ -494,8 +519,8 @@ export default function TrackerCard({
             >
               {getTypeIcon(tracker.type)}
             </div>
-            <div>
-              <div className="flex items-center gap-2">
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
                 <h3 className="font-medium">{tracker.name}</h3>
                 {tracker.tags &&
                   tracker.tags.map((tag: string) => (
@@ -519,21 +544,21 @@ export default function TrackerCard({
               </div>
               <p className="text-foreground/70 mt-1 text-sm">{tracker.description}</p>
               <div className="text-foreground/60 mt-2 flex items-center text-xs">
-                <span suppressHydrationWarning>Last used: {formatDate(tracker.updatedAt)}</span>
+                <span suppressHydrationWarning>{formatDate(tracker.updatedAt)}</span>
                 <span className="mx-2">•</span>
                 <span>{tracker.entriesCount ?? 0} entries</span>
               </div>
             </div>
           </div>
-          <div className="flex flex-col space-y-2" onClick={(e) => e.stopPropagation()}>
+          <div className="flex flex-row items-center justify-between space-x-2 sm:flex-col sm:items-end sm:space-y-2">
             {getStatsDisplay()}
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-2" onClick={(e) => e.stopPropagation()}>
               {tracker.status !== TrackerStatus.ARCHIVED && getActionButtons()}
               <Link href={`/trackers/${tracker.id}`}>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-11 w-11"
+                  className="size-8"
                   aria-label={`View ${tracker.name}`}
                 >
                   <EyeIcon aria-hidden="true" />
@@ -545,10 +570,10 @@ export default function TrackerCard({
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-11 w-11"
+                      className="size-8"
                       aria-label="More actions"
                     >
-                      <MoreHorizontal className="h-4 w-4" />
+                      <MoreHorizontal className="size-4" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
@@ -557,7 +582,7 @@ export default function TrackerCard({
                         href={`/trackers/${tracker.id}/edit`}
                         className="flex items-center gap-2"
                       >
-                        <Edit2Icon className="h-4 w-4" />
+                        <Edit2Icon className="size-4" />
                         Edit
                       </Link>
                     </DropdownMenuItem>
@@ -566,7 +591,7 @@ export default function TrackerCard({
                       disabled={isDuplicating}
                       className="flex items-center gap-2"
                     >
-                      <Copy className="h-4 w-4" />
+                      <Copy className="size-4" />
                       {isDuplicating ? "Duplicating…" : "Duplicate"}
                     </DropdownMenuItem>
                     <DropdownMenuItem
@@ -576,12 +601,12 @@ export default function TrackerCard({
                     >
                       {tracker.isPinned ? (
                         <>
-                          <PinOff className="h-4 w-4" />
+                          <PinOff className="size-4" />
                           {isPinning ? "Unpinning…" : "Unpin"}
                         </>
                       ) : (
                         <>
-                          <Pin className="h-4 w-4" />
+                          <Pin className="size-4" />
                           {isPinning ? "Pinning…" : "Pin to dashboard"}
                         </>
                       )}
@@ -593,7 +618,7 @@ export default function TrackerCard({
                           href={`/trackers/${tracker.id}/edit`}
                           className="text-muted-foreground flex items-center gap-2"
                         >
-                          <Archive className="h-4 w-4" />
+                          <Archive className="size-4" />
                           Archive
                         </Link>
                       </DropdownMenuItem>

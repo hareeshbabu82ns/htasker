@@ -6,18 +6,14 @@ import { Tracker, TrackerFormValues } from "@/types";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { TriangleAlert } from "lucide-react";
 
-export default async function EditTrackerPage( {
-  params,
-}: {
-  params: Promise<{ id: string }>;
-} ) {
+export default async function EditTrackerPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = await params;
 
   // Fetch the tracker by ID
-  const response = await getTracker( resolvedParams.id );
+  const response = await getTracker(resolvedParams.id);
 
   // Handle not found
-  if ( !response.success ) {
+  if (!response.success) {
     return notFound();
   }
 
@@ -41,14 +37,15 @@ export default async function EditTrackerPage( {
       <div>
         <Link
           href={`/trackers/${resolvedParams.id}`}
-          className="text-sm text-foreground/70 hover:text-foreground flex items-center gap-1"
+          className="text-foreground/70 hover:text-foreground flex items-center gap-1 text-sm"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
-            viewBox="0 0 24 24" strokeWidth={1.5}
+            viewBox="0 0 24 24"
+            strokeWidth={1.5}
             stroke="currentColor"
-            className="w-4 h-4"
+            className="h-4 w-4"
           >
             <path
               strokeLinecap="round"
@@ -58,24 +55,12 @@ export default async function EditTrackerPage( {
           </svg>
           Back to tracker details
         </Link>
-        <h1 className="text-2xl font-semibold mt-1">Edit Tracker</h1>
+        <h1 className="mt-1 text-2xl font-semibold">Edit Tracker</h1>
       </div>
 
-      {/* Info box */}
-      <Alert variant="destructive" className="border-destructive/50">
-        <TriangleAlert className="h-6 w-6" />
-        <AlertTitle className="text-lg">Edit with caution</AlertTitle>
-        <AlertDescription>
-          Tracker type cannot be changed after creation. All other properties can be modified.
-        </AlertDescription>
-      </Alert>
-
       {/* Tracker form */}
-      <div className="bg-background border border-border p-6 rounded-lg">
-        <TrackerForm
-          initialData={initialData}
-          trackerId={resolvedParams.id}
-        />
+      <div className="bg-background border-border rounded-lg border p-6">
+        <TrackerForm initialData={initialData} trackerId={resolvedParams.id} />
       </div>
     </div>
   );

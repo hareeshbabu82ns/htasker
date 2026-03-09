@@ -2,17 +2,18 @@ import TrackerForm from "@/components/features/trackers/TrackerForm";
 import Link from "next/link";
 import { TrackerType } from "@/types";
 
-const VALID_TRACKER_TYPES = new Set<string>( Object.values( TrackerType ) );
+const VALID_TRACKER_TYPES = new Set<string>(Object.values(TrackerType));
 
-export default async function NewTrackerPage( {
+export default async function NewTrackerPage({
   searchParams,
 }: {
-  searchParams: Promise<{ [ key: string ]: string | string[] | undefined }>;
-} ) {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
   const resolvedParams = await searchParams;
-  const rawType = typeof resolvedParams.type === "string" ? resolvedParams.type.toUpperCase() : undefined;
+  const rawType =
+    typeof resolvedParams.type === "string" ? resolvedParams.type.toUpperCase() : undefined;
   const preselectedType: TrackerType | undefined =
-    rawType && VALID_TRACKER_TYPES.has( rawType ) ? ( rawType as TrackerType ) : undefined;
+    rawType && VALID_TRACKER_TYPES.has(rawType) ? (rawType as TrackerType) : undefined;
 
   return (
     <div className="space-y-6">
@@ -20,7 +21,7 @@ export default async function NewTrackerPage( {
       <div>
         <Link
           href="/trackers"
-          className="text-sm text-foreground/70 hover:text-foreground flex items-center gap-1"
+          className="text-foreground/70 hover:text-foreground flex items-center gap-1 text-sm"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -28,7 +29,7 @@ export default async function NewTrackerPage( {
             viewBox="0 0 24 24"
             strokeWidth={1.5}
             stroke="currentColor"
-            className="w-4 h-4"
+            className="h-4 w-4"
           >
             <path
               strokeLinecap="round"
@@ -38,39 +39,11 @@ export default async function NewTrackerPage( {
           </svg>
           Back to trackers
         </Link>
-        <h1 className="text-2xl font-semibold mt-1">Create a New Tracker</h1>
-      </div>
-
-      {/* Info box */}
-      <div className="bg-primary/5 border border-primary/20 p-4 rounded-lg">
-        <div className="flex items-start">
-          <div className="mr-3 text-primary">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={1.5}
-              stroke="currentColor"
-              className="w-5 h-5"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"
-              />
-            </svg>
-          </div>
-          <div>
-            <h3 className="font-medium text-primary">Choose the right tracker type</h3>
-            <p className="text-sm text-foreground/80 mt-1">
-              Each tracker type is designed for specific tracking needs. Once selected, the tracker type cannot be changed.
-            </p>
-          </div>
-        </div>
+        <h1 className="mt-1 text-2xl font-semibold">Create a New Tracker</h1>
       </div>
 
       {/* Tracker form */}
-      <div className="bg-background border border-border p-6 rounded-lg">
+      <div className="bg-background border-border rounded-lg border p-6">
         <TrackerForm initialData={preselectedType ? { type: preselectedType } : undefined} />
       </div>
     </div>

@@ -86,7 +86,7 @@ export default function RecentTrackers() {
   return (
     <section className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-xl font-semibold">Recent Trackers</h2>
+        <h2 className="text-xl font-semibold">Recent</h2>
         <div className="flex items-center gap-2">
           <Button asChild variant="ghost" size="sm">
             <Link href="/trackers">View All</Link>
