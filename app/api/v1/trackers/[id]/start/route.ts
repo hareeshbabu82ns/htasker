@@ -72,7 +72,7 @@ export async function POST(request: Request, { params }: RouteContext) {
 
       const startTime = new Date();
       const entry = await tx.trackerEntry.create({
-        data: { trackerId: id, startTime, note, date: startTime },
+        data: { trackerId: id, startTime, endTime: null, note, date: startTime },
       });
 
       await tx.tracker.update({
