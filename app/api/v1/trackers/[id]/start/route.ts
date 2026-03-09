@@ -55,14 +55,19 @@ export async function POST(request: Request, { params }: RouteContext) {
         return { wrongType: true, type: tracker.type } as const;
       }
 
-      // Check for an already-running timer (entry with startTime but no endTime)
+      // Check for an already-running timer (entry with startTime but no endTime).
+      // If one exists, return it as-is — start is idempotent.
       const activeEntry = await tx.trackerEntry.findFirst({
         where: { trackerId: id, startTime: { not: null }, endTime: null },
-        select: { id: true },
+        select: { id: true, startTime: true },
       });
 
       if (activeEntry) {
-        return { alreadyRunning: true, entryId: activeEntry.id } as const;
+        return {
+          alreadyRunning: true,
+          entryId: activeEntry.id,
+          startTime: activeEntry.startTime,
+        } as const;
       }
 
       const startTime = new Date();
@@ -88,9 +93,10 @@ export async function POST(request: Request, { params }: RouteContext) {
       );
     }
     if ("alreadyRunning" in result) {
+      // Idempotent: return the running entry instead of an error
       return Response.json(
-        { error: "Timer is already running", data: { entryId: result.entryId } },
-        { status: 409 }
+        { data: { entryId: result.entryId, startTime: result.startTime, alreadyRunning: true } },
+        { status: 200 }
       );
     }
 

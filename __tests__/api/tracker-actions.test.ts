@@ -245,19 +245,25 @@ describe("POST /api/v1/trackers/:id/start", () => {
     expect(json.error).toContain("not a timer");
   });
 
-  it("returns 409 when timer is already running", async () => {
+  it("returns 200 with existing entry when timer is already running", async () => {
     mockPrisma.tracker.findFirst.mockResolvedValue({
       id: TRACKER_ID,
       type: "TIMER",
       status: "ACTIVE",
     });
-    mockPrisma.trackerEntry.findFirst.mockResolvedValue({ id: ENTRY_ID });
+    const existingStartTime = new Date(Date.now() - 5000);
+    mockPrisma.trackerEntry.findFirst.mockResolvedValue({
+      id: ENTRY_ID,
+      startTime: existingStartTime,
+    });
 
     const res = await Start(makeRequest(), makeParams());
-    expect(res.status).toBe(409);
+    expect(res.status).toBe(200);
     const json = await res.json();
-    expect(json.error).toBe("Timer is already running");
     expect(json.data.entryId).toBe(ENTRY_ID);
+    expect(json.data.alreadyRunning).toBe(true);
+    // Should NOT create a new entry
+    expect(mockPrisma.trackerEntry.create).not.toHaveBeenCalled();
   });
 
   it("starts timer and returns entryId and startTime", async () => {
