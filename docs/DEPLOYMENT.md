@@ -16,15 +16,16 @@ Copy `.env.example` to `.env.local` and fill in all required values:
 cp .env.example .env.local
 ```
 
-| Variable               | Required  | Description                                               |
-| ---------------------- | --------- | --------------------------------------------------------- |
-| `DATABASE_URL`         | ✅        | MongoDB connection string with replica set                |
-| `AUTH_SECRET`          | ✅        | JWT signing secret — generate with `openssl rand -hex 32` |
-| `NEXTAUTH_URL`         | ✅ (prod) | Public URL of the app, e.g. `https://htasker.example.com` |
-| `GOOGLE_CLIENT_ID`     | Optional  | Google OAuth App client ID                                |
-| `GOOGLE_CLIENT_SECRET` | Optional  | Google OAuth App client secret                            |
-| `GITHUB_CLIENT_ID`     | Optional  | GitHub OAuth App client ID                                |
-| `GITHUB_CLIENT_SECRET` | Optional  | GitHub OAuth App client secret                            |
+| Variable               | Required    | Description                                               |
+| ---------------------- | ----------- | --------------------------------------------------------- |
+| `DATABASE_URL`         | ✅          | MongoDB connection string with replica set                |
+| `AUTH_SECRET`          | ✅          | JWT signing secret — generate with `openssl rand -hex 32` |
+| `NEXTAUTH_URL`         | ✅ (prod)   | Public URL of the app, e.g. `https://htasker.example.com` |
+| `AUTH_URL`             | Recommended | Canonical Auth.js URL (set same value as `NEXTAUTH_URL`)  |
+| `GOOGLE_CLIENT_ID`     | Optional    | Google OAuth App client ID                                |
+| `GOOGLE_CLIENT_SECRET` | Optional    | Google OAuth App client secret                            |
+| `GITHUB_CLIENT_ID`     | Optional    | GitHub OAuth App client ID                                |
+| `GITHUB_CLIENT_SECRET` | Optional    | GitHub OAuth App client secret                            |
 
 ---
 
@@ -125,6 +126,7 @@ In the Vercel dashboard → **Settings → Environment Variables**, add:
 | `DATABASE_URL`         | MongoDB Atlas connection string |
 | `AUTH_SECRET`          | `openssl rand -hex 32` output   |
 | `NEXTAUTH_URL`         | Your Vercel deployment URL      |
+| `AUTH_URL`             | Same value as `NEXTAUTH_URL`    |
 | `GOOGLE_CLIENT_ID`     | (if using Google OAuth)         |
 | `GOOGLE_CLIENT_SECRET` | (if using Google OAuth)         |
 | `GITHUB_CLIENT_ID`     | (if using GitHub OAuth)         |
@@ -188,9 +190,10 @@ docker compose up -d --build   # rebuild and restart
 
 ## Troubleshooting
 
-| Problem                             | Solution                                                                  |
-| ----------------------------------- | ------------------------------------------------------------------------- |
-| `Prisma: Transaction not supported` | MongoDB is not running as a replica set — see MongoDB Setup above         |
-| `AUTH_SECRET is not set`            | Set `AUTH_SECRET` in your environment                                     |
-| OAuth callback error                | Ensure `NEXTAUTH_URL` matches the exact domain in your OAuth app settings |
-| Port 3000 in use                    | Change host port: `-p 3001:3000` or `ports: - "3001:3000"` in compose     |
+| Problem                             | Solution                                                                         |
+| ----------------------------------- | -------------------------------------------------------------------------------- |
+| `Prisma: Transaction not supported` | MongoDB is not running as a replica set — see MongoDB Setup above                |
+| `AUTH_SECRET is not set`            | Set `AUTH_SECRET` in /`AUTH_URL` match the exact public domain in OAuth settings |
+| Redirecting to `0.0.0.0` on sign-in | Set `NEXTAUTH_URL` and `AUTH_URL` to your public HTTPS domain (never `0.0.0.0`)  |
+| OAuth callback error                | Ensure `NEXTAUTH_URL` matches the exact domain in your OAuth app settings        |
+| Port 3000 in use                    | Change host port: `-p 3001:3000` or `ports: - "3001:3000"` in compose            |
