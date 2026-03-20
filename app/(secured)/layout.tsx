@@ -9,7 +9,15 @@ import { ReactNode, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ThemeToggle } from "@/components/ui/theme/ThemeToggle";
-import { BadgeDollarSign, CalendarRange, Clock3, Hash, Download, KeyRound } from "lucide-react";
+import {
+  BadgeDollarSign,
+  CalendarRange,
+  Clock3,
+  Hash,
+  Download,
+  KeyRound,
+  KanbanSquare,
+} from "lucide-react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 interface AppLayoutProps {
@@ -110,6 +118,12 @@ export default function AppLayout({ children }: AppLayoutProps) {
               icon={<CalendarRange />}
               label="Occurrence"
               isActive={isActive("/occurrence")}
+            />
+            <NavItem
+              href="/boards"
+              icon={<KanbanSquare className="h-5 w-5" />}
+              label="Boards"
+              isActive={isActive("/boards")}
             />
             <NavItem
               href="/stats"
