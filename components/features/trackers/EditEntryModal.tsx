@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Pencil } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -19,8 +19,20 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 import { updateEntry } from "@/app/actions/entries";
+import { useDeleteEntryMutation } from "@/hooks/useTrackerQuery";
 import { TrackerEntry, TrackerType } from "@/types";
 
 // ── Form schema ───────────────────────────────────────────────────────────────
@@ -71,17 +83,13 @@ interface EditEntryModalProps {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export default function EditEntryModal({
-  entry,
-  trackerType,
-  onSuccess,
-}: EditEntryModalProps) {
+export default function EditEntryModal({ entry, trackerType, onSuccess }: EditEntryModalProps) {
   const [open, setOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const deleteEntryMutation = useDeleteEntryMutation(entry.trackerId);
 
   const isTimer = trackerType === TrackerType.TIMER;
-  const hasNumericValue =
-    trackerType === TrackerType.COUNTER || trackerType === TrackerType.AMOUNT;
+  const hasNumericValue = trackerType === TrackerType.COUNTER || trackerType === TrackerType.AMOUNT;
   const hasCustomValue = trackerType === TrackerType.CUSTOM;
   const showValueField = hasNumericValue || hasCustomValue;
 
@@ -150,6 +158,19 @@ export default function EditEntryModal({
     }
   };
 
+  const handleDelete = () => {
+    deleteEntryMutation.mutate(entry.id, {
+      onSuccess: () => {
+        toast.success("Entry deleted");
+        setOpen(false);
+        onSuccess();
+      },
+      onError: (error) => {
+        toast.error(error.message || "Failed to delete entry");
+      },
+    });
+  };
+
   const handleOpenChange = (nextOpen: boolean) => {
     if (!nextOpen) {
       // Reset form to entry values whenever the dialog closes
@@ -171,7 +192,7 @@ export default function EditEntryModal({
         <Button
           variant="ghost"
           size="icon"
-          className="h-7 w-7 text-muted-foreground hover:text-foreground"
+          className="text-muted-foreground hover:text-foreground h-7 w-7"
           aria-label="Edit entry"
         >
           <Pencil className="h-3.5 w-3.5" />
@@ -188,14 +209,8 @@ export default function EditEntryModal({
           {!isTimer && (
             <div className="space-y-1.5">
               <Label htmlFor="entry-date">Date</Label>
-              <Input
-                id="entry-date"
-                type="datetime-local"
-                {...register("date")}
-              />
-              {errors.date && (
-                <p className="text-xs text-destructive">{errors.date.message}</p>
-              )}
+              <Input id="entry-date" type="datetime-local" {...register("date")} />
+              {errors.date && <p className="text-destructive text-xs">{errors.date.message}</p>}
             </div>
           )}
 
@@ -204,33 +219,21 @@ export default function EditEntryModal({
             <>
               <div className="space-y-1.5">
                 <Label htmlFor="entry-startTime">Start time</Label>
-                <Input
-                  id="entry-startTime"
-                  type="datetime-local"
-                  {...register("startTime")}
-                />
+                <Input id="entry-startTime" type="datetime-local" {...register("startTime")} />
                 {errors.startTime && (
-                  <p className="text-xs text-destructive">
-                    {errors.startTime.message}
-                  </p>
+                  <p className="text-destructive text-xs">{errors.startTime.message}</p>
                 )}
               </div>
 
               <div className="space-y-1.5">
                 <Label htmlFor="entry-endTime">End time</Label>
-                <Input
-                  id="entry-endTime"
-                  type="datetime-local"
-                  {...register("endTime")}
-                />
+                <Input id="entry-endTime" type="datetime-local" {...register("endTime")} />
                 {errors.endTime && (
-                  <p className="text-xs text-destructive">
-                    {errors.endTime.message}
-                  </p>
+                  <p className="text-destructive text-xs">{errors.endTime.message}</p>
                 )}
               </div>
 
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 Duration is calculated automatically from start and end times.
               </p>
             </>
@@ -249,26 +252,15 @@ export default function EditEntryModal({
                 placeholder="0"
                 {...register("value")}
               />
-              {errors.value && (
-                <p className="text-xs text-destructive">
-                  {errors.value.message}
-                </p>
-              )}
+              {errors.value && <p className="text-destructive text-xs">{errors.value.message}</p>}
             </div>
           )}
 
           {/* Note — all types */}
           <div className="space-y-1.5">
             <Label htmlFor="entry-note">Note</Label>
-            <Textarea
-              id="entry-note"
-              placeholder="Add a note…"
-              rows={3}
-              {...register("note")}
-            />
-            {errors.note && (
-              <p className="text-xs text-destructive">{errors.note.message}</p>
-            )}
+            <Textarea id="entry-note" placeholder="Add a note…" rows={3} {...register("note")} />
+            {errors.note && <p className="text-destructive text-xs">{errors.note.message}</p>}
           </div>
 
           {/* Tags — all types */}
@@ -280,23 +272,56 @@ export default function EditEntryModal({
               placeholder="tag1, tag2, tag3"
               {...register("tags")}
             />
-            <p className="text-xs text-muted-foreground">
-              Separate tags with commas.
-            </p>
+            <p className="text-muted-foreground text-xs">Separate tags with commas.</p>
           </div>
 
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setOpen(false)}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Saving…" : "Save changes"}
-            </Button>
+          <DialogFooter className="flex-row justify-between sm:justify-between">
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="text-destructive hover:text-destructive"
+                  disabled={isSubmitting || deleteEntryMutation.isPending}
+                  aria-label="Delete entry"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete entry?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will permanently delete this entry and update tracker statistics. This
+                    action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleDelete}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    Delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setOpen(false)}
+                disabled={isSubmitting || deleteEntryMutation.isPending}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSubmitting || deleteEntryMutation.isPending}>
+                {isSubmitting ? "Saving…" : "Save changes"}
+              </Button>
+            </div>
           </DialogFooter>
         </form>
       </DialogContent>
