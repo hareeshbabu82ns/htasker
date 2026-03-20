@@ -2,16 +2,13 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { trackerKeys } from "./queries/trackerQueries";
-import {
-  getTracker,
-  updateTracker,
-  CreateTrackerInput,
-} from "@/app/actions/trackers";
+import { getTracker, updateTracker, CreateTrackerInput } from "@/app/actions/trackers";
 import {
   createEntry,
   getEntriesByTracker,
   updateEntry as updateEntryAction,
   deleteEntry as deleteEntryAction,
+  getTrackerStats,
   CreateEntryInput,
 } from "@/app/actions/entries";
 import { Tracker, TrackerEntry, TrackerStatus } from "@/types";
@@ -29,9 +26,7 @@ export type TimerMutationVariables =
   | { action: "start"; now: Date }
   | { action: "stop"; entryId: string; startTime: Date };
 
-export type TimerMutationResult =
-  | { action: "start"; entryId: string }
-  | { action: "stop" };
+export type TimerMutationResult = { action: "start"; entryId: string } | { action: "stop" };
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Queries
@@ -57,11 +52,7 @@ export function useTrackerQuery(id: string) {
  * Fetch paginated entries for a tracker.
  * staleTime: 15 s — entries change more frequently than tracker stats.
  */
-export function useEntriesQuery(
-  trackerId: string,
-  page: number,
-  limit: number
-) {
+export function useEntriesQuery(trackerId: string, page: number, limit: number) {
   return useQuery<{ entries: TrackerEntry[]; total: number }>({
     queryKey: trackerKeys.entriesPaged(trackerId, page, limit),
     queryFn: async () => {
@@ -73,6 +64,53 @@ export function useEntriesQuery(
       };
     },
     staleTime: 15_000,
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Period stats
+// ─────────────────────────────────────────────────────────────────────────────
+
+type GoalPeriod = "daily" | "weekly" | "monthly";
+
+interface PeriodStats {
+  today: number;
+  week: number;
+  month: number;
+}
+
+/** Map a goalPeriod to the matching stats key and human label. */
+export function resolvePeriod(
+  goalEnabled?: boolean,
+  goalPeriod?: string | null
+): { key: keyof PeriodStats; label: string } {
+  if (goalEnabled && goalPeriod) {
+    switch (goalPeriod as GoalPeriod) {
+      case "weekly":
+        return { key: "week", label: "This week" };
+      case "monthly":
+        return { key: "month", label: "This month" };
+      case "daily":
+      default:
+        return { key: "today", label: "Today" };
+    }
+  }
+  return { key: "today", label: "Today" };
+}
+
+/**
+ * Fetch period-based stats (today / week / month) for a tracker.
+ * staleTime: 30 s — same cadence as tracker detail.
+ */
+export function usePeriodStats(trackerId: string) {
+  return useQuery<PeriodStats>({
+    queryKey: trackerKeys.stats(trackerId, "period"),
+    queryFn: async () => {
+      const response = await getTrackerStats(trackerId);
+      if (!response.success) throw new Error(response.error);
+      return response.data;
+    },
+    staleTime: 30_000,
   });
 }
 
@@ -98,6 +136,9 @@ export function useAddEntryMutation(trackerId: string) {
       void queryClient.invalidateQueries({
         queryKey: ["entries", trackerId],
       });
+      void queryClient.invalidateQueries({
+        queryKey: trackerKeys.stats(trackerId, "period"),
+      });
     },
   });
 }
@@ -107,11 +148,7 @@ export function useAddEntryMutation(trackerId: string) {
  */
 export function useUpdateEntryMutation(trackerId: string) {
   const queryClient = useQueryClient();
-  return useMutation<
-    { id: string },
-    Error,
-    { id: string; data: Partial<CreateEntryInput> }
-  >({
+  return useMutation<{ id: string }, Error, { id: string; data: Partial<CreateEntryInput> }>({
     mutationFn: async ({ id, data }) => {
       const response = await updateEntryAction(id, data);
       if (!response.success) throw new Error(response.error);
@@ -123,6 +160,9 @@ export function useUpdateEntryMutation(trackerId: string) {
       });
       void queryClient.invalidateQueries({
         queryKey: ["entries", trackerId],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: trackerKeys.stats(trackerId, "period"),
       });
     },
   });
@@ -146,6 +186,9 @@ export function useDeleteEntryMutation(trackerId: string) {
       void queryClient.invalidateQueries({
         queryKey: ["entries", trackerId],
       });
+      void queryClient.invalidateQueries({
+        queryKey: trackerKeys.stats(trackerId, "period"),
+      });
     },
   });
 }
@@ -155,11 +198,7 @@ export function useDeleteEntryMutation(trackerId: string) {
  */
 export function useUpdateTrackerMutation() {
   const queryClient = useQueryClient();
-  return useMutation<
-    { id: string },
-    Error,
-    { id: string; data: Partial<CreateTrackerInput> }
-  >({
+  return useMutation<{ id: string }, Error, { id: string; data: Partial<CreateTrackerInput> }>({
     mutationFn: async ({ id, data }) => {
       const response = await updateTracker(id, data);
       if (!response.success) throw new Error(response.error);
@@ -182,7 +221,12 @@ export function useUpdateTrackerMutation() {
 export function useCounterMutation(trackerId: string) {
   const queryClient = useQueryClient();
 
-  return useMutation<{ id: string }, Error, CounterMutationVariables, { previousTracker: Tracker | undefined }>({
+  return useMutation<
+    { id: string },
+    Error,
+    CounterMutationVariables,
+    { previousTracker: Tracker | undefined }
+  >({
     mutationFn: async (variables) => {
       const response = await createEntry({
         trackerId,
@@ -199,33 +243,24 @@ export function useCounterMutation(trackerId: string) {
       await queryClient.cancelQueries({
         queryKey: trackerKeys.detail(trackerId),
       });
-      const previousTracker = queryClient.getQueryData<Tracker>(
-        trackerKeys.detail(trackerId)
-      );
-      queryClient.setQueryData<Tracker>(
-        trackerKeys.detail(trackerId),
-        (old) => {
-          if (!old) return old;
-          return {
-            ...old,
-            statistics: {
-              ...old.statistics,
-              totalEntries: (old.statistics?.totalEntries ?? 0) + 1,
-              totalValue:
-                (old.statistics?.totalValue ?? 0) + variables.value,
-            },
-          };
-        }
-      );
+      const previousTracker = queryClient.getQueryData<Tracker>(trackerKeys.detail(trackerId));
+      queryClient.setQueryData<Tracker>(trackerKeys.detail(trackerId), (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          statistics: {
+            ...old.statistics,
+            totalEntries: (old.statistics?.totalEntries ?? 0) + 1,
+            totalValue: (old.statistics?.totalValue ?? 0) + variables.value,
+          },
+        };
+      });
       return { previousTracker };
     },
 
     onError: (_err, _vars, context) => {
       if (context?.previousTracker) {
-        queryClient.setQueryData(
-          trackerKeys.detail(trackerId),
-          context.previousTracker
-        );
+        queryClient.setQueryData(trackerKeys.detail(trackerId), context.previousTracker);
       }
     },
 
@@ -235,6 +270,9 @@ export function useCounterMutation(trackerId: string) {
       });
       void queryClient.invalidateQueries({
         queryKey: ["entries", trackerId],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: trackerKeys.stats(trackerId, "period"),
       });
     },
   });
@@ -286,31 +324,20 @@ export function useTimerMutation(trackerId: string) {
       await queryClient.cancelQueries({
         queryKey: trackerKeys.detail(trackerId),
       });
-      const previousTracker = queryClient.getQueryData<Tracker>(
-        trackerKeys.detail(trackerId)
-      );
-      queryClient.setQueryData<Tracker>(
-        trackerKeys.detail(trackerId),
-        (old) => {
-          if (!old) return old;
-          return {
-            ...old,
-            status:
-              variables.action === "start"
-                ? TrackerStatus.ACTIVE
-                : TrackerStatus.INACTIVE,
-          };
-        }
-      );
+      const previousTracker = queryClient.getQueryData<Tracker>(trackerKeys.detail(trackerId));
+      queryClient.setQueryData<Tracker>(trackerKeys.detail(trackerId), (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          status: variables.action === "start" ? TrackerStatus.ACTIVE : TrackerStatus.INACTIVE,
+        };
+      });
       return { previousTracker };
     },
 
     onError: (_err, _vars, context) => {
       if (context?.previousTracker) {
-        queryClient.setQueryData(
-          trackerKeys.detail(trackerId),
-          context.previousTracker
-        );
+        queryClient.setQueryData(trackerKeys.detail(trackerId), context.previousTracker);
       }
     },
 
@@ -320,6 +347,9 @@ export function useTimerMutation(trackerId: string) {
       });
       void queryClient.invalidateQueries({
         queryKey: ["entries", trackerId],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: trackerKeys.stats(trackerId, "period"),
       });
     },
   });

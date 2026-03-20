@@ -8,6 +8,7 @@ import {
   unpinTracker,
 } from "@/app/actions/trackers";
 import { useSwipeGesture } from "@/hooks/useSwipeGesture";
+import { usePeriodStats, resolvePeriod } from "@/hooks/useTrackerQuery";
 import { TrackerStatus, TrackerType } from "@/app/generated/prisma";
 import { Button } from "@/components/ui/button";
 import {
@@ -76,6 +77,12 @@ export default function TrackerCard({
   const [isArchiving, setIsArchiving] = useState(false);
   const [counterValue, setCounterValue] = useState(tracker.statistics?.totalValue ?? 0);
   const router = useRouter();
+
+  const periodStatsQuery = usePeriodStats(tracker.id);
+  const { key: periodKey, label: periodLabel } = resolvePeriod(
+    tracker.goalEnabled ?? false,
+    tracker.goalPeriod
+  );
 
   // Sync counterValue when server data updates after router.refresh()
   useEffect(() => {
@@ -405,14 +412,20 @@ export default function TrackerCard({
     }
   };
 
-  // Get stats display based on tracker type
+  // Get stats display based on tracker type (period-aware)
   const getStatsDisplay = () => {
+    const periodValue = periodStatsQuery.data?.[periodKey];
+    const hasPeriodData = periodStatsQuery.data !== undefined;
+
     switch (tracker.type) {
-      case TrackerType.TIMER:
+      case TrackerType.TIMER: {
+        const displaySeconds = hasPeriodData
+          ? (periodValue ?? 0)
+          : tracker.statistics?.totalTime || 0;
         return (
           <div>
             <div className="text-secondary text-lg" aria-live="off" aria-atomic="true">
-              {formatDuration(tracker.statistics?.totalTime || 0)}
+              {formatDuration(displaySeconds)}
               {isRunning && (
                 <span
                   className="text-primary mt-1 ml-1 text-xs font-medium"
@@ -424,29 +437,45 @@ export default function TrackerCard({
                 </span>
               )}
             </div>
+            <div className="text-muted-foreground text-xs">{periodLabel}</div>
           </div>
         );
+      }
       case TrackerType.COUNTER:
       case TrackerType.AMOUNT: {
         const prefix = tracker.type === TrackerType.AMOUNT ? "$" : "";
-        const displayValue =
-          tracker.type === TrackerType.COUNTER
+        const displayValue = hasPeriodData
+          ? (periodValue ?? 0)
+          : tracker.type === TrackerType.COUNTER
             ? counterValue
             : (tracker.statistics?.totalValue ?? 0);
         return (
-          <div
-            className="text-secondary text-lg"
-            aria-live="polite"
-            aria-atomic="true"
-            aria-label={`${tracker.name} total: ${prefix}${displayValue}`}
-          >
-            {prefix}
-            {displayValue}
+          <div>
+            <div
+              className="text-secondary text-lg"
+              aria-live="polite"
+              aria-atomic="true"
+              aria-label={`${tracker.name} ${periodLabel}: ${prefix}${displayValue}`}
+            >
+              {prefix}
+              {displayValue}
+            </div>
+            <div className="text-muted-foreground text-xs">{periodLabel}</div>
           </div>
         );
       }
       case TrackerType.CUSTOM:
-      case TrackerType.OCCURRENCE:
+      case TrackerType.OCCURRENCE: {
+        if (hasPeriodData) {
+          return (
+            <div>
+              <div className="text-secondary text-lg">
+                {periodValue ?? 0} {(periodValue ?? 0) === 1 ? "entry" : "entries"}
+              </div>
+              <div className="text-muted-foreground text-xs">{periodLabel}</div>
+            </div>
+          );
+        }
         const lastOccurrence = tracker.updatedAt;
         const today = new Date();
         const diffTime = Math.abs(today.getTime() - new Date(lastOccurrence).getTime());
@@ -466,6 +495,7 @@ export default function TrackerCard({
               : `${diffDays}d ago`}
           </div>
         );
+      }
       default:
         return <div></div>;
     }
