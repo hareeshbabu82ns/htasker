@@ -7,7 +7,7 @@ import { useParams } from "next/navigation";
 
 export default function BoardDetailPage() {
   const params = useParams();
-  const boardId = params.id as string;
+  const boardId = params.boardId as string;
   const { data: board, isLoading, error } = useBoardQuery(boardId);
 
   if (isLoading) {

@@ -2,95 +2,154 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { ThemeToggle } from "@/components/ui/theme/ThemeToggle";
 import { Button } from "@/components/ui/button";
-import { BadgeDollarSign, Hash } from "lucide-react";
+import { BadgeDollarSign, Hash, Clock, BarChart3, Zap } from "lucide-react";
 
+// Feature Card Component
 interface FeatureCardProps {
   title: string;
   description: string;
   icon: ReactNode;
 }
 
+function FeatureCard({ title, description, icon }: FeatureCardProps) {
+  return (
+    <div className="glass-card flex flex-col items-start rounded-2xl p-8 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl">
+      <div className="mb-6 rounded-xl bg-gradient-to-br from-indigo-500 to-fuchsia-500 p-3 text-white shadow-md shadow-indigo-500/20">
+        {icon}
+      </div>
+      <h3 className="mb-3 text-2xl font-bold tracking-tight">{title}</h3>
+      <p className="text-foreground/70 leading-relaxed">{description}</p>
+    </div>
+  );
+}
+
 export default function Home() {
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="relative flex min-h-screen flex-col overflow-hidden">
+      {/* Background gradients */}
+      <div className="hero-gradient pointer-events-none absolute inset-0 z-0 opacity-60"></div>
+
       {/* Navigation */}
-      <header className="border-border border-b">
-        <div className="container mx-auto flex items-center justify-between px-4 py-4">
+      <header className="border-border/40 bg-background/50 relative sticky top-0 z-10 border-b backdrop-blur-md transition-all">
+        <div className="container mx-auto flex items-center justify-between px-6 py-4">
           <div className="flex items-center space-x-2">
-            <span className="text-primary text-2xl font-bold">HTracker</span>
+            <div className="rounded-lg bg-gradient-to-r from-indigo-600 to-fuchsia-600 p-2">
+              <Zap className="h-6 w-6 text-white" />
+            </div>
+            <span className="text-gradient text-2xl font-extrabold tracking-tight">HTracker</span>
           </div>
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-6">
             <ThemeToggle />
             <Link href="/dashboard">
-              <Button>Dashboard</Button>
+              <Button className="rounded-full px-6 shadow-lg shadow-indigo-500/20 transition-transform hover:scale-105">
+                Dashboard
+              </Button>
             </Link>
           </div>
         </div>
       </header>
 
-      {/* Hero Section */}
-      <section className="flex flex-1 flex-col items-center justify-center px-4 py-16 text-center md:py-24">
-        <h1 className="mb-6 text-4xl font-bold tracking-tight md:text-6xl">
-          Track <span className="text-primary">Anything</span>, Anytime
-        </h1>
-        <p className="text-foreground/80 mb-10 max-w-2xl text-lg md:text-xl">
-          HTracker is a powerful application that helps you track time, counters, amounts, and more.
-          Stay productive and keep everything organized in one place.
-        </p>
-        <div className="flex flex-col space-y-4 sm:flex-row sm:space-y-0 sm:space-x-4">
-          <Link href="/dashboard">
-            <Button size="lg">Get Started</Button>
-          </Link>
-          <Link href="/login">
-            <Button variant="outline" size="lg">
-              Sign In
-            </Button>
-          </Link>
-        </div>
-      </section>
-
-      {/* Features Section */}
-      <section className="bg-muted py-16">
-        <div className="container mx-auto px-4">
-          <h2 className="mb-12 text-center text-3xl font-bold">Key Features</h2>
-          <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-4">
-            <FeatureCard
-              title="Time Tracking"
-              description="Track how long you spend on different activities with simple start/stop controls."
-              icon={<ClockIcon />}
-            />
-            <FeatureCard
-              title="Counter Tracking"
-              description="Count occurrences of anything with easy increment and decrement controls."
-              icon={<Hash />}
-            />
-            <FeatureCard
-              title="Amount Tracking"
-              description="Track numerical values like expenses, income, or any other quantity."
-              icon={<BadgeDollarSign />}
-            />
-            <FeatureCard
-              title="Custom Tracking"
-              description="Create your own tracking method for whatever you need to monitor."
-              icon={<CustomIcon />}
-            />
+      <main className="relative z-10 flex flex-1 flex-col pt-12 md:pt-4">
+        {/* Hero Section */}
+        <section className="flex flex-col items-center justify-center px-4 py-20 text-center md:py-32 xl:py-40">
+          <div className="mb-8 inline-flex items-center rounded-full border border-indigo-500/30 bg-indigo-500/10 px-4 py-1.5 text-sm font-medium text-indigo-600 backdrop-blur-sm dark:text-indigo-400">
+            <span className="mr-2 flex h-2 w-2 animate-pulse rounded-full bg-indigo-600 dark:bg-indigo-400"></span>
+            HTracker 2.0 is now live
           </div>
-        </div>
-      </section>
+          <h1 className="mb-6 max-w-4xl text-5xl font-extrabold tracking-tight sm:text-7xl md:leading-tight">
+            Master your metrics with <span className="text-gradient">precision</span> and style.
+          </h1>
+          <p className="text-foreground/70 mb-10 max-w-2xl text-lg leading-relaxed md:text-xl">
+            A comprehensive tracking solution built for modern professionals. Monitor time, count
+            occurrences, and track expenses all in one delightfully simple interface.
+          </p>
+          <div className="flex flex-col space-y-4 sm:flex-row sm:space-y-0 sm:space-x-4">
+            <Link href="/dashboard">
+              <Button
+                size="lg"
+                className="rounded-full px-8 py-6 text-lg shadow-xl shadow-indigo-600/20 transition-all hover:-translate-y-1 hover:shadow-indigo-600/40"
+              >
+                Start Tracking Free
+              </Button>
+            </Link>
+            <Link href="/login">
+              <Button
+                variant="outline"
+                size="lg"
+                className="glass hover:bg-foreground/5 rounded-full px-8 py-6 text-lg backdrop-blur-md transition-all"
+              >
+                Sign In
+              </Button>
+            </Link>
+          </div>
+        </section>
+
+        {/* Features Section */}
+        <section className="relative mt-auto py-24">
+          <div className="bg-muted/30 border-border/50 absolute inset-0 -z-10 origin-top-left skew-y-[-2deg] border-y shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)]"></div>
+          <div className="relative z-10 container mx-auto px-6">
+            <div className="mb-16 text-center">
+              <h2 className="mb-4 text-4xl font-extrabold tracking-tight">
+                Everything you need to stay organized
+              </h2>
+              <p className="text-foreground/60 mx-auto max-w-2xl text-lg">
+                Flexible tracking modules designed to adapt to your unique workflow.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-4">
+              <FeatureCard
+                title="Time Tracking"
+                description="Effortlessly log minutes and hours. Understand exactly where your time goes with our powerful visual timer."
+                icon={<Clock className="h-6 w-6" />}
+              />
+              <FeatureCard
+                title="Counters"
+                description="Keep tally of habits, Inventory, or repeated actions. Simple, tap-to-increment counters that sync instantly."
+                icon={<Hash className="h-6 w-6" />}
+              />
+              <FeatureCard
+                title="Expenses & Amounts"
+                description="Maintain budgets, track revenue, or keep a ledger of any numerical value. Fast and accurate."
+                icon={<BadgeDollarSign className="h-6 w-6" />}
+              />
+              <FeatureCard
+                title="Visual Analytics"
+                description="Generate stunning reports and beautiful charts. Uncover insights to optimize your routines."
+                icon={<BarChart3 className="h-6 w-6" />}
+              />
+            </div>
+          </div>
+        </section>
+      </main>
 
       {/* Footer */}
-      <footer className="border-border border-t py-8">
-        <div className="container mx-auto px-4">
-          <div className="flex flex-col items-center justify-between md:flex-row">
-            <p className="text-foreground/70 text-sm">© 2025 HTracker. All rights reserved.</p>
-            <div className="mt-4 flex space-x-6 md:mt-0">
-              <Link href="/privacy" className="text-foreground/70 hover:text-foreground text-sm">
-                Privacy Policy
+      <footer className="border-border/40 bg-background/50 relative z-10 border-t py-12 text-center backdrop-blur-sm md:text-left">
+        <div className="container mx-auto px-6">
+          <div className="flex flex-col items-center justify-between gap-6 md:flex-row">
+            <div className="flex items-center space-x-2">
+              <Zap className="h-5 w-5 text-indigo-500" />
+              <span className="font-bold">HTracker</span>
+            </div>
+            <p className="text-foreground/60 text-sm">
+              © {new Date().getFullYear()} HTracker Inc. Designed for power users.
+            </p>
+            <div className="flex space-x-6">
+              <Link
+                href="/privacy"
+                className="text-foreground/60 text-sm transition-colors hover:text-indigo-500"
+              >
+                Privacy
               </Link>
-              <Link href="/terms" className="text-foreground/70 hover:text-foreground text-sm">
-                Terms of Service
+              <Link
+                href="/terms"
+                className="text-foreground/60 text-sm transition-colors hover:text-indigo-500"
+              >
+                Terms
               </Link>
-              <Link href="/contact" className="text-foreground/70 hover:text-foreground text-sm">
+              <Link
+                href="/contact"
+                className="text-foreground/60 text-sm transition-colors hover:text-indigo-500"
+              >
                 Contact
               </Link>
             </div>
@@ -98,56 +157,5 @@ export default function Home() {
         </div>
       </footer>
     </div>
-  );
-}
-
-// Feature Card Component
-function FeatureCard({ title, description, icon }: FeatureCardProps) {
-  return (
-    <div className="bg-background border-border flex flex-col items-center rounded-lg border p-6 text-center shadow-sm">
-      <div className="text-primary mb-4">{icon}</div>
-      <h3 className="mb-2 text-xl font-semibold">{title}</h3>
-      <p className="text-foreground/80">{description}</p>
-    </div>
-  );
-}
-
-// Icon Components
-function ClockIcon() {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      fill="none"
-      viewBox="0 0 24 24"
-      strokeWidth={1.5}
-      stroke="currentColor"
-      className="h-8 w-8"
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
-      />
-    </svg>
-  );
-}
-
-function CustomIcon() {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      fill="none"
-      viewBox="0 0 24 24"
-      strokeWidth={1.5}
-      stroke="currentColor"
-      className="h-8 w-8"
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z"
-      />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
-    </svg>
   );
 }

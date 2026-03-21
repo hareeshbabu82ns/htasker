@@ -33,7 +33,8 @@ export default function OccurrenceTracker({ tracker, onUpdate }: OccurrenceTrack
   const { data: streakData } = useQuery({
     queryKey: ["occurrenceStreak", tracker.id],
     queryFn: async () => {
-      const res = await getOccurrenceStreak(tracker.id);
+      const timezoneOffset = new Date().getTimezoneOffset();
+      const res = await getOccurrenceStreak(tracker.id, timezoneOffset);
       if (!res.success) throw new Error(res.error);
       return res.data;
     },
@@ -44,7 +45,7 @@ export default function OccurrenceTracker({ tracker, onUpdate }: OccurrenceTrack
   const [note, setNote] = useState("");
 
   const today = new Date();
-  const formattedToday = today.toISOString().split("T")[0];
+  const formattedToday = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
   const [selectedDate, setSelectedDate] = useState(formattedToday);
 
   const entriesQuery = useEntriesQuery(tracker.id, currentPage, currentLimit);
@@ -82,7 +83,7 @@ export default function OccurrenceTracker({ tracker, onUpdate }: OccurrenceTrack
     addEntryMutation.mutate(
       {
         trackerId: tracker.id,
-        date: new Date(selectedDate),
+        date: new Date(`${selectedDate}T00:00:00`),
         note: note.trim() || null,
         tags: [],
       },

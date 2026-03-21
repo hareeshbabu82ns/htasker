@@ -24,11 +24,7 @@ const EntrySchema = z.object({
   startTime: z.date().optional().nullable(),
   endTime: z.date().optional().nullable(),
   value: z.number().optional().nullable(),
-  note: z
-    .string()
-    .max(500, "Note cannot exceed 500 characters")
-    .optional()
-    .nullable(),
+  note: z.string().max(500, "Note cannot exceed 500 characters").optional().nullable(),
   tags: z.array(z.string()).optional().default([]),
   date: z.date().default(() => new Date()),
 });
@@ -64,15 +60,9 @@ export async function createEntry(
       });
 
       // Calculate duration for timer entries if both start and end times are provided
-      if (
-        validatedData.startTime &&
-        validatedData.endTime &&
-        !validatedData.value
-      ) {
+      if (validatedData.startTime && validatedData.endTime && !validatedData.value) {
         const durationInSeconds = Math.round(
-          (validatedData.endTime.getTime() -
-            validatedData.startTime.getTime()) /
-            1000
+          (validatedData.endTime.getTime() - validatedData.startTime.getTime()) / 1000
         );
 
         // Update the entry with the calculated duration stored in value field
@@ -104,9 +94,7 @@ export async function createEntry(
           // Only update completed timer entries
           if (validatedData.startTime && validatedData.endTime) {
             const durationInSeconds = Math.round(
-              (validatedData.endTime.getTime() -
-                validatedData.startTime.getTime()) /
-                1000
+              (validatedData.endTime.getTime() - validatedData.startTime.getTime()) / 1000
             );
 
             const currentEntries = tracker.statistics?.totalEntries || 0;
@@ -126,10 +114,7 @@ export async function createEntry(
 
         case "COUNTER":
         case "AMOUNT":
-          if (
-            validatedData.value !== null &&
-            validatedData.value !== undefined
-          ) {
+          if (validatedData.value !== null && validatedData.value !== undefined) {
             const currentEntries = tracker.statistics?.totalEntries || 0;
             const currentValue = tracker.statistics?.totalValue || 0;
 
@@ -179,9 +164,7 @@ export async function createEntry(
     if (error instanceof z.ZodError) {
       return {
         success: false,
-        error: `Validation failed: ${error.issues
-          .map((e) => e.message)
-          .join(", ")}`,
+        error: `Validation failed: ${error.issues.map((e) => e.message).join(", ")}`,
       };
     }
 
@@ -192,9 +175,7 @@ export async function createEntry(
 /**
  * Get a tracker entry by ID
  */
-export async function getEntry(
-  id: string
-): Promise<EntryActionResponse<unknown>> {
+export async function getEntry(id: string): Promise<EntryActionResponse<unknown>> {
   try {
     const userId = await requireUserId();
 
@@ -253,10 +234,7 @@ export async function updateEntry(
       }
 
       // If trackerId is being changed, verify the new tracker also belongs to user
-      if (
-        validatedData.trackerId &&
-        validatedData.trackerId !== originalEntry.trackerId
-      ) {
+      if (validatedData.trackerId && validatedData.trackerId !== originalEntry.trackerId) {
         const newTracker = await tx.tracker.findFirst({
           where: { id: validatedData.trackerId, userId },
           select: { id: true },
@@ -283,9 +261,7 @@ export async function updateEntry(
         const endTime = validatedData.endTime || originalEntry.endTime;
 
         if (startTime && endTime) {
-          const durationInSeconds = Math.round(
-            (endTime.getTime() - startTime.getTime()) / 1000
-          );
+          const durationInSeconds = Math.round((endTime.getTime() - startTime.getTime()) / 1000);
 
           // Update the entry with the calculated duration
           await tx.trackerEntry.update({
@@ -396,9 +372,7 @@ export async function updateEntry(
     if (error instanceof z.ZodError) {
       return {
         success: false,
-        error: `Validation failed: ${error.issues
-          .map((e) => e.message)
-          .join(", ")}`,
+        error: `Validation failed: ${error.issues.map((e) => e.message).join(", ")}`,
       };
     }
 
@@ -409,9 +383,7 @@ export async function updateEntry(
 /**
  * Delete a tracker entry
  */
-export async function deleteEntry(
-  id: string
-): Promise<EntryActionResponse<{ id: string }>> {
+export async function deleteEntry(id: string): Promise<EntryActionResponse<{ id: string }>> {
   try {
     const userId = await requireUserId();
 
@@ -649,9 +621,7 @@ export async function stopTimerEntry(
         : currentEntry.note;
 
       // Calculate duration in seconds
-      const duration = Math.round(
-        (endTime.getTime() - currentEntry.startTime.getTime()) / 1000
-      );
+      const duration = Math.round((endTime.getTime() - currentEntry.startTime.getTime()) / 1000);
 
       // Update the entry with end time and duration (stored in value field)
       const entry = await tx.trackerEntry.update({
@@ -770,10 +740,9 @@ export async function addCounterEntry(
  * Get entry counts for today, this week, and this month for a tracker
  */
 export async function getTrackerStats(
-  trackerId: string
-): Promise<
-  EntryActionResponse<{ today: number; week: number; month: number }>
-> {
+  trackerId: string,
+  timezoneOffset: number = 0
+): Promise<EntryActionResponse<{ today: number; week: number; month: number }>> {
   try {
     const userId = await requireUserId();
 
@@ -787,14 +756,25 @@ export async function getTrackerStats(
     }
 
     const now = new Date();
-    const todayStart = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate()
+    // User's current local time represented in UTC
+    const localNow = new Date(now.getTime() - timezoneOffset * 60000);
+
+    // User's local today start (midnight)
+    const localTodayStart = new Date(
+      Date.UTC(localNow.getUTCFullYear(), localNow.getUTCMonth(), localNow.getUTCDate())
     );
-    const weekStart = new Date(todayStart);
-    weekStart.setDate(todayStart.getDate() - todayStart.getDay());
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const todayStart = new Date(localTodayStart.getTime() + timezoneOffset * 60000);
+
+    // User's local week start
+    const localWeekStart = new Date(localTodayStart.getTime());
+    localWeekStart.setUTCDate(localTodayStart.getUTCDate() - localNow.getUTCDay());
+    const weekStart = new Date(localWeekStart.getTime() + timezoneOffset * 60000);
+
+    // User's local month start
+    const localMonthStart = new Date(
+      Date.UTC(localNow.getUTCFullYear(), localNow.getUTCMonth(), 1)
+    );
+    const monthStart = new Date(localMonthStart.getTime() + timezoneOffset * 60000);
 
     let today = 0;
     let week = 0;
@@ -910,11 +890,12 @@ export async function getTrackerStats(
 // Phase 6 Analytics
 // ---------------------------------------------------------------------------
 
-/** Format a Date to a local-calendar YYYY-MM-DD string */
-function toLocalDateStr(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
+/** Format a Date to a local-calendar YYYY-MM-DD string according to user timezone */
+function toLocalDateStr(d: Date, timezoneOffset: number = 0): string {
+  const adjusted = new Date(d.getTime() - timezoneOffset * 60000);
+  const y = adjusted.getUTCFullYear();
+  const m = String(adjusted.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(adjusted.getUTCDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
 }
 
@@ -925,24 +906,31 @@ function toLocalDateStr(d: Date): string {
  */
 export async function getTrackerTrend(
   trackerId: string,
-  startDate: Date,
-  endDate: Date
+  startDateStr: string,
+  endDateStr: string,
+  timezoneOffset: number = 0
 ): Promise<EntryActionResponse<{ date: string; value: number }[]>> {
   try {
     const userId = await requireUserId();
 
-    // Allow startDate === endDate (single-day trend); reject only if strictly after
-    if (startDate > endDate) {
+    if (startDateStr > endDateStr) {
       return { success: false, error: "startDate must not be after endDate" };
     }
-    // Normalize to calendar-day boundaries so query and output are consistent
-    const queryStart = new Date(startDate);
-    queryStart.setHours(0, 0, 0, 0);
-    const queryEnd = new Date(endDate);
-    queryEnd.setHours(23, 59, 59, 999);
 
-    const rangeDays =
-      (queryEnd.getTime() - queryStart.getTime()) / (1000 * 60 * 60 * 24);
+    // Parse the input dates interpreting them as user's local dates
+    const startParts = startDateStr.split("-").map(Number);
+    const endParts = endDateStr.split("-").map(Number);
+
+    // Create UTC midnight representing the local dates, then apply offset to get real UTC time
+    const localStartMidnight = new Date(Date.UTC(startParts[0], startParts[1] - 1, startParts[2]));
+    const queryStart = new Date(localStartMidnight.getTime() + timezoneOffset * 60000);
+
+    const localEndMidnight = new Date(
+      Date.UTC(endParts[0], endParts[1] - 1, endParts[2], 23, 59, 59, 999)
+    );
+    const queryEnd = new Date(localEndMidnight.getTime() + timezoneOffset * 60000);
+
+    const rangeDays = (queryEnd.getTime() - queryStart.getTime()) / (1000 * 60 * 60 * 24);
     if (rangeDays > 365) {
       return { success: false, error: "Date range cannot exceed 365 days" };
     }
@@ -967,7 +955,7 @@ export async function getTrackerTrend(
     // Aggregate entries by calendar day
     const grouped = new Map<string, number>();
     for (const entry of entries) {
-      const key = toLocalDateStr(entry.date);
+      const key = toLocalDateStr(entry.date, timezoneOffset);
       const prev = grouped.get(key) ?? 0;
       switch (tracker.type) {
         case "TIMER":
@@ -988,7 +976,7 @@ export async function getTrackerTrend(
     rangeEnd.setHours(0, 0, 0, 0);
 
     while (cursor <= rangeEnd) {
-      const key = toLocalDateStr(cursor);
+      const key = toLocalDateStr(cursor, timezoneOffset);
       result.push({ date: key, value: grouped.get(key) ?? 0 });
       cursor.setDate(cursor.getDate() + 1);
     }
@@ -1009,7 +997,8 @@ export async function getTrackerTrend(
  */
 export async function getCalendarData(
   trackerId: string,
-  year: number
+  year: number,
+  timezoneOffset: number = 0
 ): Promise<EntryActionResponse<{ date: string; count: number }[]>> {
   try {
     const userId = await requireUserId();
@@ -1026,8 +1015,11 @@ export async function getCalendarData(
       throw new Error("Tracker not found");
     }
 
-    const yearStart = new Date(year, 0, 1, 0, 0, 0, 0);
-    const yearEnd = new Date(year, 11, 31, 23, 59, 59, 999);
+    const localYearStartMidnight = new Date(Date.UTC(year, 0, 1));
+    const yearStart = new Date(localYearStartMidnight.getTime() + timezoneOffset * 60000);
+
+    const localYearEndMidnight = new Date(Date.UTC(year, 11, 31, 23, 59, 59, 999));
+    const yearEnd = new Date(localYearEndMidnight.getTime() + timezoneOffset * 60000);
 
     const entries = await prisma.trackerEntry.findMany({
       where: {
@@ -1040,13 +1032,13 @@ export async function getCalendarData(
 
     const counts = new Map<string, number>();
     for (const entry of entries) {
-      const key = toLocalDateStr(entry.date);
+      const key = toLocalDateStr(entry.date, timezoneOffset);
       counts.set(key, (counts.get(key) ?? 0) + 1);
     }
 
-    const result: { date: string; count: number }[] = Array.from(
-      counts.entries()
-    ).map(([date, count]) => ({ date, count }));
+    const result: { date: string; count: number }[] = Array.from(counts.entries()).map(
+      ([date, count]) => ({ date, count })
+    );
 
     return { success: true, data: result };
   } catch (error) {
@@ -1064,7 +1056,8 @@ export async function getCalendarData(
  * The current streak counts if the most recent entry is today or yesterday.
  */
 export async function getOccurrenceStreak(
-  trackerId: string
+  trackerId: string,
+  timezoneOffset: number = 0
 ): Promise<
   EntryActionResponse<{
     current: number;
@@ -1099,7 +1092,7 @@ export async function getOccurrenceStreak(
     // Collect unique calendar days, sorted ascending
     const daySet = new Set<string>();
     for (const entry of entries) {
-      daySet.add(toLocalDateStr(entry.date));
+      daySet.add(toLocalDateStr(entry.date, timezoneOffset));
     }
     const days = Array.from(daySet).sort();
 
@@ -1111,9 +1104,7 @@ export async function getOccurrenceStreak(
     for (let i = 1; i < days.length; i++) {
       const prev = new Date(days[i - 1] + "T00:00:00");
       const curr = new Date(days[i] + "T00:00:00");
-      const diffDays = Math.round(
-        (curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24)
-      );
+      const diffDays = Math.round((curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24));
       if (diffDays === 1) {
         runLen++;
         if (runLen > longest) longest = runLen;
@@ -1123,10 +1114,10 @@ export async function getOccurrenceStreak(
     }
 
     // Compute current streak (streak is live if last entry is today or yesterday)
-    const todayStr = toLocalDateStr(new Date());
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = toLocalDateStr(yesterday);
+    const now = new Date();
+    const todayStr = toLocalDateStr(now, timezoneOffset);
+    const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const yesterdayStr = toLocalDateStr(yesterday, timezoneOffset);
 
     let current = 0;
     if (lastDate === todayStr || lastDate === yesterdayStr) {
@@ -1134,9 +1125,7 @@ export async function getOccurrenceStreak(
       for (let i = days.length - 1; i > 0; i--) {
         const prev = new Date(days[i - 1] + "T00:00:00");
         const curr = new Date(days[i] + "T00:00:00");
-        const diffDays = Math.round(
-          (curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24)
-        );
+        const diffDays = Math.round((curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24));
         if (diffDays === 1) {
           current++;
         } else {
@@ -1192,18 +1181,13 @@ export async function exportTrackerCSV(
       if (val == null) return "";
       // Prefix formula-trigger characters to prevent spreadsheet formula injection
       const sanitized = /^[=+\-@]/.test(val) ? `'${val}` : val;
-      if (
-        sanitized.includes(",") ||
-        sanitized.includes('"') ||
-        sanitized.includes("\n")
-      ) {
+      if (sanitized.includes(",") || sanitized.includes('"') || sanitized.includes("\n")) {
         return `"${sanitized.replace(/"/g, '""')}"`;
       }
       return sanitized;
     };
 
-    const isoOrEmpty = (d: Date | null): string =>
-      d != null ? d.toISOString() : "";
+    const isoOrEmpty = (d: Date | null): string => (d != null ? d.toISOString() : "");
 
     const rows: string[] = ["date,value,startTime,endTime,note,tags"];
     for (const entry of entries) {

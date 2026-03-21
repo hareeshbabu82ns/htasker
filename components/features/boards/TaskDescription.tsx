@@ -1,9 +1,11 @@
 "use client";
 
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import Link from "next/link";
-import type { ComponentPropsWithoutRef } from "react";
+import dynamic from "next/dynamic";
+
+const MarkdownPreview = dynamic(
+  () => import("@uiw/react-markdown-preview").then((mod) => mod.default),
+  { ssr: false }
+);
 
 interface TaskDescriptionProps {
   content: string;
@@ -24,34 +26,14 @@ export function TaskDescription({ content, boardId }: TaskDescriptionProps) {
   const processed = preprocessTaskRefs(content, boardId);
 
   return (
-    <div className="prose prose-sm dark:prose-invert max-w-none">
-      <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
-        components={{
-          a: ({ href, children, ...props }: ComponentPropsWithoutRef<"a">) => {
-            if (href?.startsWith("/")) {
-              return (
-                <Link href={href} className="text-primary hover:underline" {...props}>
-                  {children}
-                </Link>
-              );
-            }
-            return (
-              <a
-                href={href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary hover:underline"
-                {...props}
-              >
-                {children}
-              </a>
-            );
-          },
+    <div className="text-foreground/90 w-full" onClick={(e) => e.stopPropagation()}>
+      <MarkdownPreview
+        source={processed}
+        style={{
+          backgroundColor: "transparent",
+          color: "inherit",
         }}
-      >
-        {processed}
-      </ReactMarkdown>
+      />
     </div>
   );
 }

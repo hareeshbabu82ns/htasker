@@ -106,7 +106,8 @@ export function usePeriodStats(trackerId: string) {
   return useQuery<PeriodStats>({
     queryKey: trackerKeys.stats(trackerId, "period"),
     queryFn: async () => {
-      const response = await getTrackerStats(trackerId);
+      const timezoneOffset = new Date().getTimezoneOffset();
+      const response = await getTrackerStats(trackerId, timezoneOffset);
       if (!response.success) throw new Error(response.error);
       return response.data;
     },

@@ -3,17 +3,8 @@ import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getTrackerTrend } from "@/app/actions/entries";
 import { TrackerType } from "@/types";
-import {
-  ChartContainer,
-  ChartTooltip,
-} from "@/components/ui/chart";
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-} from "recharts";
+import { ChartContainer, ChartTooltip } from "@/components/ui/chart";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid } from "recharts";
 import { formatDuration } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -25,8 +16,16 @@ interface TrendChartProps {
 }
 
 interface TrendPoint {
-  date: string;   // "YYYY-MM-DD"
+  date: string; // "YYYY-MM-DD"
   value: number;
+}
+
+/** Format a Date as "YYYY-MM-DD" using LOCAL calendar day (not UTC). */
+function toLocalDateStr(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
 }
 
 /** Format a "YYYY-MM-DD" string as "Jan 5" / "Feb 12" */
@@ -37,20 +36,29 @@ function formatDateLabel(dateStr: string): string {
 
 function getYAxisLabel(trackerType: TrackerType): string {
   switch (trackerType) {
-    case TrackerType.TIMER:      return "Duration";
-    case TrackerType.COUNTER:    return "Count";
-    case TrackerType.AMOUNT:     return "Amount";
-    case TrackerType.OCCURRENCE: return "Occurrences";
-    case TrackerType.CUSTOM:     return "Entries";
-    default:                     return "Value";
+    case TrackerType.TIMER:
+      return "Duration";
+    case TrackerType.COUNTER:
+      return "Count";
+    case TrackerType.AMOUNT:
+      return "Amount";
+    case TrackerType.OCCURRENCE:
+      return "Occurrences";
+    case TrackerType.CUSTOM:
+      return "Entries";
+    default:
+      return "Value";
   }
 }
 
 function formatValue(value: number, trackerType: TrackerType): string {
   switch (trackerType) {
-    case TrackerType.TIMER:  return formatDuration(value);
-    case TrackerType.AMOUNT: return `$${value.toLocaleString()}`;
-    default:                 return value.toString();
+    case TrackerType.TIMER:
+      return formatDuration(value);
+    case TrackerType.AMOUNT:
+      return `$${value.toLocaleString()}`;
+    default:
+      return value.toString();
   }
 }
 
@@ -69,13 +77,14 @@ export default function TrendChart({ trackerId, trackerType }: TrendChartProps) 
     const start = new Date();
     start.setDate(end.getDate() - (windowDays - 1));
     start.setHours(0, 0, 0, 0);
-    return { startDate: start, endDate: end };
+    return { startDate: toLocalDateStr(start), endDate: toLocalDateStr(end) };
   }, [windowDays]);
 
   const { data, isLoading, isError } = useQuery<TrendPoint[], Error>({
     queryKey: ["trackerTrend", trackerId, windowDays],
     queryFn: async () => {
-      const res = await getTrackerTrend(trackerId, startDate, endDate);
+      const timezoneOffset = new Date().getTimezoneOffset();
+      const res = await getTrackerTrend(trackerId, startDate, endDate, timezoneOffset);
       if (!res.success) throw new Error(res.error);
       return res.data;
     },
@@ -113,20 +122,20 @@ export default function TrendChart({ trackerId, trackerType }: TrendChartProps) 
 
       {/* Chart */}
       {isLoading ? (
-        <Skeleton className="w-full h-64" />
+        <Skeleton className="h-64 w-full" />
       ) : isError ? (
-        <div className="flex items-center justify-center h-64 text-sm text-muted-foreground">
+        <div className="text-muted-foreground flex h-64 items-center justify-center text-sm">
           Failed to load trend data.
         </div>
       ) : !data || data.length === 0 ? (
-        <div className="flex items-center justify-center h-64 text-sm text-muted-foreground">
+        <div className="text-muted-foreground flex h-64 items-center justify-center text-sm">
           No data for this period.
         </div>
       ) : (
         <ChartContainer
           id={`tracker-trend-${trackerId}`}
           config={{ value: { label: yLabel, color: "#6366F1" } }}
-          className="w-full h-64"
+          className="h-64 w-full"
         >
           <AreaChart data={data} margin={{ top: 10, right: 20, left: 20, bottom: 10 }}>
             <defs>

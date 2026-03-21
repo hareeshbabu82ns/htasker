@@ -56,16 +56,32 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
         {/* Sidebar */}
         <aside
-          className={`bg-background border-border fixed inset-y-0 left-0 z-20 w-64 transform border-r transition-transform duration-200 lg:static lg:translate-x-0 ${
+          className={`bg-sidebar/95 border-sidebar-border fixed inset-y-0 left-0 z-30 w-64 transform border-r shadow-2xl backdrop-blur-xl transition-all duration-300 ease-in-out lg:static lg:translate-x-0 lg:shadow-none ${
             sidebarOpen ? "translate-x-0" : "-translate-x-full"
           }`}
           aria-label="Main navigation"
           id="sidebar"
         >
           {/* Sidebar header */}
-          <div className="border-border flex h-16 items-center justify-between border-b px-4">
-            <Link href="/" className="flex items-center">
-              <span className="text-primary text-xl font-bold">HTracker</span>
+          <div className="border-border/50 flex h-16 items-center justify-between border-b px-6">
+            <Link href="/" className="group flex items-center space-x-2">
+              <div className="rounded-md bg-gradient-to-br from-indigo-500 to-fuchsia-500 p-1.5 shadow-md shadow-indigo-500/20 transition-transform group-hover:scale-105">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="h-5 w-5 text-white"
+                >
+                  <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+                </svg>
+              </div>
+              <span className="bg-gradient-to-r from-indigo-600 to-fuchsia-600 bg-clip-text text-xl font-extrabold tracking-tight text-transparent dark:from-indigo-400 dark:to-fuchsia-400">
+                HTracker
+              </span>
             </Link>
             <button
               onClick={() => setSidebarOpen(false)}
@@ -156,7 +172,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
         <div className="flex flex-1 flex-col overflow-hidden">
           {/* Header */}
           <header
-            className="border-border flex h-16 items-center justify-between border-b px-4 lg:px-6"
+            className="border-border/40 bg-background/60 sticky top-0 z-20 flex h-16 items-center justify-between border-b px-4 backdrop-blur-md transition-all lg:px-6"
             role="banner"
           >
             {/* Mobile menu button */}
@@ -244,14 +260,26 @@ function NavItem({ href, icon, label, isActive }: NavItemProps) {
     <Link
       href={href}
       aria-current={isActive ? "page" : undefined}
-      className={`flex items-center rounded-md px-3 py-2 transition-colors ${
-        isActive ? "bg-primary text-white" : "text-foreground hover:bg-muted hover:text-foreground"
+      className={`group my-0.5 flex items-center rounded-xl px-3 py-2.5 transition-all duration-200 ${
+        isActive
+          ? "bg-gradient-to-r from-indigo-500/15 to-fuchsia-500/10 font-semibold text-indigo-700 dark:text-indigo-300"
+          : "text-foreground/80 hover:bg-muted/80 hover:text-foreground hover:scale-[1.02]"
       }`}
     >
-      <span className="mr-3" aria-hidden="true">
+      <span
+        className={`mr-3 transition-colors ${
+          isActive
+            ? "text-indigo-600 dark:text-indigo-400"
+            : "text-muted-foreground group-hover:text-foreground"
+        }`}
+        aria-hidden="true"
+      >
         {icon}
       </span>
       <span>{label}</span>
+      {isActive && (
+        <span className="ml-auto h-5 w-1.5 rounded-full bg-gradient-to-b from-indigo-500 to-fuchsia-500 shadow-sm shadow-indigo-500/20"></span>
+      )}
     </Link>
   );
 }

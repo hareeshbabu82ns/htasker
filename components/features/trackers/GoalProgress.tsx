@@ -8,12 +8,7 @@ import { toast } from "sonner";
 import { Tracker } from "@/types";
 import { getTrackerTrend } from "@/app/actions/entries";
 
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -69,10 +64,20 @@ export default function GoalProgress({ tracker }: GoalProgressProps) {
 
   const { start, end, label } = useMemo(() => getPeriodDates(period), [period]);
 
-  const { data: trendData, isLoading, isError } = useQuery({
+  const {
+    data: trendData,
+    isLoading,
+    isError,
+  } = useQuery({
     queryKey: ["trackerTrend", tracker.id, toLocalDateStr(start), toLocalDateStr(end)],
     queryFn: async () => {
-      const res = await getTrackerTrend(tracker.id, start, end);
+      const timezoneOffset = new Date().getTimezoneOffset();
+      const res = await getTrackerTrend(
+        tracker.id,
+        toLocalDateStr(start),
+        toLocalDateStr(end),
+        timezoneOffset
+      );
       if (!res.success) throw new Error(res.error);
       return res.data;
     },
@@ -103,14 +108,14 @@ export default function GoalProgress({ tracker }: GoalProgressProps) {
             <Skeleton className="h-4 w-1/3" />
           </div>
         ) : isError ? (
-          <p className="text-sm text-muted-foreground">Failed to load progress data.</p>
+          <p className="text-muted-foreground text-sm">Failed to load progress data.</p>
         ) : (
           <>
             {/* Period label + status badge */}
             <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">{label}</span>
+              <span className="text-muted-foreground text-sm">{label}</span>
               {isGoalMet ? (
-                <Badge className="bg-green-500 text-white gap-1">
+                <Badge className="gap-1 bg-green-500 text-white">
                   <CheckCircle2 className="size-3" />
                   Goal reached! 🎉
                 </Badge>
@@ -127,12 +132,8 @@ export default function GoalProgress({ tracker }: GoalProgressProps) {
 
             {/* Value text */}
             <p className="text-sm font-medium">
-              {Number.isInteger(currentValue)
-                ? currentValue
-                : currentValue.toFixed(2)}{" "}
-              /{" "}
-              {Number.isInteger(goalValue) ? goalValue : goalValue.toFixed(2)}{" "}
-              {goalUnit}
+              {Number.isInteger(currentValue) ? currentValue : currentValue.toFixed(2)} /{" "}
+              {Number.isInteger(goalValue) ? goalValue : goalValue.toFixed(2)} {goalUnit}
             </p>
           </>
         )}

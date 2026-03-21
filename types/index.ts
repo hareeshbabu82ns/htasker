@@ -144,6 +144,9 @@ export interface BoardTask {
   title: string;
   description?: string | null;
   order: number;
+  startDate?: Date | null;
+  dueDate?: Date | null;
+  priority?: string | null;
   columnId: string;
   boardId: string;
   assigneeId?: string | null;
@@ -160,5 +163,8 @@ export type BoardFormValues = {
 export type BoardTaskFormValues = {
   title: string;
   description?: string;
+  startDate?: Date | null;
+  dueDate?: Date | null;
+  priority?: string | null;
   assigneeId?: string | null;
 };

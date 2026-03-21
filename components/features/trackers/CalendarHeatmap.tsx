@@ -4,19 +4,14 @@ import React, { useState, useMemo, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getCalendarData } from "@/app/actions/entries";
 import { Tracker, TrackerType } from "@/types";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardContent,
-} from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface CalendarDay {
-  date: string;         // "YYYY-MM-DD" — empty string for padding cells
+  date: string; // "YYYY-MM-DD" — empty string for padding cells
   count: number;
   isCurrentYear: boolean;
   isPadding: boolean;
@@ -35,8 +30,18 @@ interface CalendarHeatmapProps {
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const MONTH_LABELS = [
-  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
 ];
 
 // Only 3 abbreviated day labels shown (Mon=1, Wed=3, Fri=5)
@@ -118,7 +123,9 @@ function buildGrid(year: number): {
   while (i < flat.length) {
     const week: CalendarDay[] = [];
     for (let row = 0; row < 7; row++) {
-      week.push(i < flat.length ? flat[i] : { date: "", count: 0, isCurrentYear: false, isPadding: true });
+      week.push(
+        i < flat.length ? flat[i] : { date: "", count: 0, isCurrentYear: false, isPadding: true }
+      );
       i++;
     }
     weeks.push(week);
@@ -152,13 +159,11 @@ export default function CalendarHeatmap({ tracker }: CalendarHeatmapProps) {
   const [year, setYear] = useState(currentYear);
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
 
-  const { data, isLoading, isError } = useQuery<
-    { date: string; count: number }[],
-    Error
-  >({
+  const { data, isLoading, isError } = useQuery<{ date: string; count: number }[], Error>({
     queryKey: ["calendarData", tracker.id, year],
     queryFn: async () => {
-      const res = await getCalendarData(tracker.id, year);
+      const timezoneOffset = new Date().getTimezoneOffset();
+      const res = await getCalendarData(tracker.id, year, timezoneOffset);
       if (!res.success) throw new Error(res.error);
       return res.data;
     },
@@ -189,14 +194,11 @@ export default function CalendarHeatmap({ tracker }: CalendarHeatmapProps) {
     return grid;
   }, [year, countMap]);
 
-  const handleMouseEnter = useCallback(
-    (day: CalendarDay, e: React.MouseEvent<HTMLDivElement>) => {
-      if (day.isPadding || !day.date) return;
-      const rect = e.currentTarget.getBoundingClientRect();
-      setTooltip({ day, x: rect.left + rect.width / 2, y: rect.top });
-    },
-    []
-  );
+  const handleMouseEnter = useCallback((day: CalendarDay, e: React.MouseEvent<HTMLDivElement>) => {
+    if (day.isPadding || !day.date) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    setTooltip({ day, x: rect.left + rect.width / 2, y: rect.top });
+  }, []);
 
   const handleMouseLeave = useCallback(() => {
     setTooltip(null);
@@ -210,7 +212,7 @@ export default function CalendarHeatmap({ tracker }: CalendarHeatmapProps) {
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-base font-semibold">
-            <CalendarDays className="w-4 h-4 text-muted-foreground" />
+            <CalendarDays className="text-muted-foreground h-4 w-4" />
             Activity
           </CardTitle>
           {/* Year navigation */}
@@ -219,20 +221,18 @@ export default function CalendarHeatmap({ tracker }: CalendarHeatmapProps) {
               onClick={() => setYear((y) => y - 1)}
               disabled={!canGoPrev}
               aria-label="Previous year"
-              className="rounded p-1 hover:bg-accent disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              className="hover:bg-accent rounded p-1 transition-colors disabled:cursor-not-allowed disabled:opacity-30"
             >
-              <ChevronLeft className="w-4 h-4" />
+              <ChevronLeft className="h-4 w-4" />
             </button>
-            <span className="min-w-[3rem] text-center font-medium tabular-nums">
-              {year}
-            </span>
+            <span className="min-w-[3rem] text-center font-medium tabular-nums">{year}</span>
             <button
               onClick={() => setYear((y) => y + 1)}
               disabled={!canGoNext}
               aria-label="Next year"
-              className="rounded p-1 hover:bg-accent disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              className="hover:bg-accent rounded p-1 transition-colors disabled:cursor-not-allowed disabled:opacity-30"
             >
-              <ChevronRight className="w-4 h-4" />
+              <ChevronRight className="h-4 w-4" />
             </button>
           </div>
         </div>
@@ -240,23 +240,20 @@ export default function CalendarHeatmap({ tracker }: CalendarHeatmapProps) {
 
       <CardContent>
         {isLoading ? (
-          <Skeleton className="w-full h-28" />
+          <Skeleton className="h-28 w-full" />
         ) : isError ? (
-          <div className="flex items-center justify-center h-28 text-sm text-muted-foreground">
+          <div className="text-muted-foreground flex h-28 items-center justify-center text-sm">
             Failed to load activity data.
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <div className="inline-flex flex-col gap-1 min-w-max">
+            <div className="inline-flex min-w-max flex-col gap-1">
               {/* Month labels row */}
               <div className="flex gap-[2px] pl-8">
                 {weeks.map((_, col) => {
                   const monthInfo = monthCols.find((m) => m.col === col);
                   return (
-                    <div
-                      key={col}
-                      className="w-3 text-[10px] text-muted-foreground leading-none"
-                    >
+                    <div key={col} className="text-muted-foreground w-3 text-[10px] leading-none">
                       {monthInfo ? MONTH_LABELS[monthInfo.month] : ""}
                     </div>
                   );
@@ -266,11 +263,11 @@ export default function CalendarHeatmap({ tracker }: CalendarHeatmapProps) {
               {/* Grid: day rows (Sun=0 to Sat=6) */}
               <div className="flex gap-[2px]">
                 {/* Day-of-week labels (left side) */}
-                <div className="flex flex-col gap-[2px] mr-1 w-7">
+                <div className="mr-1 flex w-7 flex-col gap-[2px]">
                   {[0, 1, 2, 3, 4, 5, 6].map((row) => (
                     <div
                       key={row}
-                      className="h-3 flex items-center justify-end text-[10px] text-muted-foreground leading-none"
+                      className="text-muted-foreground flex h-3 items-center justify-end text-[10px] leading-none"
                     >
                       {ROW_LABELS[row] ?? ""}
                     </div>
@@ -284,14 +281,12 @@ export default function CalendarHeatmap({ tracker }: CalendarHeatmapProps) {
                       <div
                         key={row}
                         className={[
-                          "w-3 h-3 rounded-sm cursor-default transition-opacity",
+                          "h-3 w-3 cursor-default rounded-sm transition-opacity",
                           day.isPadding
-                            ? "opacity-0 pointer-events-none"
+                            ? "pointer-events-none opacity-0"
                             : getIntensityClass(day.count),
                         ].join(" ")}
-                        onMouseEnter={
-                          day.isPadding ? undefined : (e) => handleMouseEnter(day, e)
-                        }
+                        onMouseEnter={day.isPadding ? undefined : (e) => handleMouseEnter(day, e)}
                         onMouseLeave={day.isPadding ? undefined : handleMouseLeave}
                         aria-label={
                           day.isPadding
@@ -306,13 +301,19 @@ export default function CalendarHeatmap({ tracker }: CalendarHeatmapProps) {
 
               {/* Legend */}
               <div className="flex items-center gap-1 pt-1 pl-8">
-                <span className="text-[10px] text-muted-foreground mr-1">Less</span>
-                {(["bg-slate-100 dark:bg-slate-800", "bg-indigo-200 dark:bg-indigo-900", "bg-indigo-400 dark:bg-indigo-700", "bg-indigo-600 dark:bg-indigo-500", "bg-indigo-800 dark:bg-indigo-300"] as const).map(
-                  (cls, i) => (
-                    <div key={i} className={`w-3 h-3 rounded-sm ${cls}`} />
-                  )
-                )}
-                <span className="text-[10px] text-muted-foreground ml-1">More</span>
+                <span className="text-muted-foreground mr-1 text-[10px]">Less</span>
+                {(
+                  [
+                    "bg-slate-100 dark:bg-slate-800",
+                    "bg-indigo-200 dark:bg-indigo-900",
+                    "bg-indigo-400 dark:bg-indigo-700",
+                    "bg-indigo-600 dark:bg-indigo-500",
+                    "bg-indigo-800 dark:bg-indigo-300",
+                  ] as const
+                ).map((cls, i) => (
+                  <div key={i} className={`h-3 w-3 rounded-sm ${cls}`} />
+                ))}
+                <span className="text-muted-foreground ml-1 text-[10px]">More</span>
               </div>
             </div>
           </div>
@@ -322,10 +323,10 @@ export default function CalendarHeatmap({ tracker }: CalendarHeatmapProps) {
       {/* Floating tooltip — rendered via a portal-like fixed div */}
       {tooltip && !tooltip.day.isPadding && (
         <div
-          className="fixed z-50 pointer-events-none"
+          className="pointer-events-none fixed z-50"
           style={{ left: tooltip.x, top: tooltip.y - 8, transform: "translate(-50%, -100%)" }}
         >
-          <div className="rounded-md bg-popover text-popover-foreground border shadow-md px-2.5 py-1.5 text-xs whitespace-nowrap">
+          <div className="bg-popover text-popover-foreground rounded-md border px-2.5 py-1.5 text-xs whitespace-nowrap shadow-md">
             <div className="font-medium">{formatTooltipDate(tooltip.day.date)}</div>
             <div className="text-muted-foreground">
               {buildEntryLabel(tooltip.day.count, tracker.type)}

@@ -43,30 +43,43 @@ export default function TrackerStatsChart({ trackerId, trackerType }: TrackerSta
   // Determine labels based on tracker type
   const seriesLabel = React.useMemo(() => {
     switch (trackerType) {
-      case TrackerType.TIMER:    return "Duration (s)";
-      case TrackerType.COUNTER:  return "Count";
-      case TrackerType.AMOUNT:   return "Amount";
-      case TrackerType.OCCURRENCE: return "Occurrences";
-      case TrackerType.CUSTOM:   return "Entries";
-      default:                   return "Value";
+      case TrackerType.TIMER:
+        return "Duration (s)";
+      case TrackerType.COUNTER:
+        return "Count";
+      case TrackerType.AMOUNT:
+        return "Amount";
+      case TrackerType.OCCURRENCE:
+        return "Occurrences";
+      case TrackerType.CUSTOM:
+        return "Entries";
+      default:
+        return "Value";
     }
   }, [trackerType]);
 
   // Tooltip formatter based on tracker type
-  const tooltipFormatter = React.useCallback((value: number) => {
-    switch (trackerType) {
-      case TrackerType.TIMER:  return formatDuration(value);
-      case TrackerType.AMOUNT: return `$${value}`;
-      default:                 return value.toString();
-    }
-  }, [trackerType]);
+  const tooltipFormatter = React.useCallback(
+    (value: number) => {
+      switch (trackerType) {
+        case TrackerType.TIMER:
+          return formatDuration(value);
+        case TrackerType.AMOUNT:
+          return `$${value}`;
+        default:
+          return value.toString();
+      }
+    },
+    [trackerType]
+  );
 
   // Query for preset periods
   const presetQuery = useQuery({
     queryKey: ["trackerStats", trackerId, period],
     enabled: period !== "custom",
     queryFn: async () => {
-      const res = await getTrackerStats(trackerId);
+      const timezoneOffset = new Date().getTimezoneOffset();
+      const res = await getTrackerStats(trackerId, timezoneOffset);
       if (!res.success) throw new Error(res.error);
       return res.data;
     },
@@ -77,12 +90,9 @@ export default function TrackerStatsChart({ trackerId, trackerType }: TrackerSta
     queryKey: ["trackerTrend", trackerId, "custom", customStart, customEnd],
     enabled: period === "custom" && !!customStart && !!customEnd && customStart <= customEnd,
     queryFn: async () => {
-      // Parse as local-time midnight/end-of-day so the server sees the correct calendar day
-      const res = await getTrackerTrend(
-        trackerId,
-        new Date(customStart + "T00:00:00"),
-        new Date(customEnd   + "T23:59:59")
-      );
+      // Use string dates and pass browser timezone offset so server can accurately resolve the local day boundaries
+      const timezoneOffset = new Date().getTimezoneOffset();
+      const res = await getTrackerTrend(trackerId, customStart, customEnd, timezoneOffset);
       if (!res.success) throw new Error(res.error);
       const total = res.data.reduce((sum, d) => sum + d.value, 0);
       return total;
@@ -90,24 +100,22 @@ export default function TrackerStatsChart({ trackerId, trackerType }: TrackerSta
   });
 
   const isLoading = period === "custom" ? customQuery.isLoading : presetQuery.isLoading;
-  const isError   = period === "custom" ? customQuery.isError  : presetQuery.isError;
+  const isError = period === "custom" ? customQuery.isError : presetQuery.isError;
 
   // Build chart data
   const stats = React.useMemo(() => {
     if (period === "custom") {
       const total = customQuery.data ?? 0;
-      const label = customStart && customEnd
-        ? `${customStart} – ${customEnd}`
-        : "Custom";
+      const label = customStart && customEnd ? `${customStart} – ${customEnd}` : "Custom";
       return [{ period: label, count: total }];
     }
     const d = presetQuery.data;
     if (!d) return [];
     if (period === "today") return [{ period: "Today", count: d.today }];
-    if (period === "week")  return [{ period: "This Week", count: d.week }];
+    if (period === "week") return [{ period: "This Week", count: d.week }];
     return [
-      { period: "Today",      count: d.today },
-      { period: "This Week",  count: d.week },
+      { period: "Today", count: d.today },
+      { period: "This Week", count: d.week },
       { period: "This Month", count: d.month },
     ];
   }, [period, presetQuery.data, customQuery.data, customStart, customEnd]);
@@ -115,7 +123,7 @@ export default function TrackerStatsChart({ trackerId, trackerType }: TrackerSta
   return (
     <div className="space-y-3">
       {/* Period selector */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <Tabs value={period} onValueChange={(v) => setPeriod(v as Period)}>
           <TabsList>
             <TabsTrigger value="today">Today</TabsTrigger>
@@ -132,7 +140,7 @@ export default function TrackerStatsChart({ trackerId, trackerType }: TrackerSta
               value={customStart}
               max={customEnd || undefined}
               onChange={(e) => setCustomStart(e.target.value)}
-              className="rounded-md border border-input bg-background px-2 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="border-input bg-background ring-offset-background focus-visible:ring-ring rounded-md border px-2 py-1 text-sm focus-visible:ring-2 focus-visible:outline-none"
             />
             <span className="text-muted-foreground">to</span>
             <input
@@ -141,7 +149,7 @@ export default function TrackerStatsChart({ trackerId, trackerType }: TrackerSta
               min={customStart || undefined}
               max={toLocalDateStr(new Date())}
               onChange={(e) => setCustomEnd(e.target.value)}
-              className="rounded-md border border-input bg-background px-2 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="border-input bg-background ring-offset-background focus-visible:ring-ring rounded-md border px-2 py-1 text-sm focus-visible:ring-2 focus-visible:outline-none"
             />
           </div>
         )}
@@ -149,21 +157,24 @@ export default function TrackerStatsChart({ trackerId, trackerType }: TrackerSta
 
       {/* Chart */}
       {isLoading ? (
-        <Skeleton className="w-full h-64" />
+        <Skeleton className="h-64 w-full" />
       ) : isError ? (
-        <div className="flex items-center justify-center h-64 text-sm text-muted-foreground">
+        <div className="text-muted-foreground flex h-64 items-center justify-center text-sm">
           Failed to load stats.
         </div>
       ) : (
         <ChartContainer
           id={`tracker-stats-${trackerId}`}
           config={{ count: { label: seriesLabel, color: "#10B981" } }}
-          className="w-full h-64"
+          className="h-64 w-full"
         >
           <BarChart data={stats} margin={{ top: 20, right: 30, left: 20, bottom: 25 }}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="period" />
-            <YAxis allowDecimals={false} label={{ value: seriesLabel, angle: -90, position: "insideLeft", offset: 0 }} />
+            <YAxis
+              allowDecimals={false}
+              label={{ value: seriesLabel, angle: -90, position: "insideLeft", offset: 0 }}
+            />
             <ChartTooltip formatter={tooltipFormatter} />
             <Bar dataKey="count" fill="var(--color-count)" />
           </BarChart>

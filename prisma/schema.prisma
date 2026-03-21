@@ -180,6 +180,9 @@ model BoardTask {
   title       String
   description String?
   order       Int
+  startDate   DateTime?
+  dueDate     DateTime?
+  priority    String?     @default("MEDIUM")
   columnId    String      @db.ObjectId
   column      BoardColumn @relation(fields: [columnId], references: [id], onDelete: Cascade)
   boardId     String      @db.ObjectId

@@ -7,11 +7,7 @@ import { getTrackerStats } from "@/app/actions/entries";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from "@/components/ui/chart";
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import type { ChartConfig } from "@/components/ui/chart";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
 import { BarChart2, AlertCircle, X } from "lucide-react";
@@ -37,10 +33,7 @@ const PERIODS: { label: string; key: StatsKey }[] = [
 // Helpers
 // ---------------------------------------------------------------------------
 
-function getTrackerColor(
-  tracker: TrackerWithEntriesCount | undefined,
-  idx: number
-): string {
+function getTrackerColor(tracker: TrackerWithEntriesCount | undefined, idx: number): string {
   if (tracker?.color) return tracker.color;
   return FALLBACK_COLORS[idx % FALLBACK_COLORS.length] ?? "#6366f1";
 }
@@ -87,7 +80,8 @@ export default function TrackerComparison(_props: TrackerComparisonProps) {
     queries: selectedIds.map((id) => ({
       queryKey: ["trackerStats", id] as const,
       queryFn: async (): Promise<StatsData> => {
-        const r = await getTrackerStats(id);
+        const timezoneOffset = new Date().getTimezoneOffset();
+        const r = await getTrackerStats(id, timezoneOffset);
         if (!r.success) throw new Error(r.error);
         return { id, ...r.data };
       },
@@ -116,15 +110,13 @@ export default function TrackerComparison(_props: TrackerComparisonProps) {
   const renderableIds = selectedIds.filter((id) => statsById[id] !== undefined);
 
   // Chart data: each row is a period; columns keyed by tracker ID (stable).
-  const chartData: Record<string, string | number>[] = PERIODS.map(
-    ({ label, key }) => {
-      const entry: Record<string, string | number> = { period: label };
-      renderableIds.forEach((id) => {
-        entry[id] = statsById[id]?.[key] ?? 0;
-      });
-      return entry;
-    }
-  );
+  const chartData: Record<string, string | number>[] = PERIODS.map(({ label, key }) => {
+    const entry: Record<string, string | number> = { period: label };
+    renderableIds.forEach((id) => {
+      entry[id] = statsById[id]?.[key] ?? 0;
+    });
+    return entry;
+  });
 
   // Chart config: keyed by tracker ID so CSS vars match data keys exactly.
   const chartConfig: ChartConfig = {};
@@ -154,22 +146,21 @@ export default function TrackerComparison(_props: TrackerComparisonProps) {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Select Trackers</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Choose 2–4 trackers to compare ({selectedIds.length}/{MAX_TRACKERS}{" "}
-            selected)
+          <p className="text-muted-foreground text-sm">
+            Choose 2–4 trackers to compare ({selectedIds.length}/{MAX_TRACKERS} selected)
           </p>
         </CardHeader>
 
         <CardContent className="space-y-4">
           {trackersLoading ? (
-            <p className="text-sm text-muted-foreground">Loading trackers…</p>
+            <p className="text-muted-foreground text-sm">Loading trackers…</p>
           ) : trackersError ? (
-            <div className="flex items-center gap-2 text-sm text-destructive">
-              <AlertCircle className="w-4 h-4 shrink-0" />
+            <div className="text-destructive flex items-center gap-2 text-sm">
+              <AlertCircle className="h-4 w-4 shrink-0" />
               Failed to load trackers. Please refresh the page.
             </div>
           ) : !trackers?.length ? (
-            <p className="text-sm text-muted-foreground">
+            <p className="text-muted-foreground text-sm">
               No trackers found. Create a tracker first.
             </p>
           ) : (
@@ -177,9 +168,7 @@ export default function TrackerComparison(_props: TrackerComparisonProps) {
               {trackers.map((tracker) => {
                 const isSelected = selectedIds.includes(tracker.id);
                 const selectedIdx = selectedIds.indexOf(tracker.id);
-                const activeColor = isSelected
-                  ? getTrackerColor(tracker, selectedIdx)
-                  : undefined;
+                const activeColor = isSelected ? getTrackerColor(tracker, selectedIdx) : undefined;
 
                 return (
                   <button
@@ -188,12 +177,12 @@ export default function TrackerComparison(_props: TrackerComparisonProps) {
                     onClick={() => toggleTracker(tracker.id)}
                     disabled={!isSelected && !canSelectMore}
                     className={[
-                      "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition-colors border",
+                      "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors",
                       isSelected
-                        ? "text-white border-transparent"
+                        ? "border-transparent text-white"
                         : "bg-muted text-muted-foreground border-border hover:bg-accent hover:text-accent-foreground",
                       !isSelected && !canSelectMore
-                        ? "opacity-40 cursor-not-allowed"
+                        ? "cursor-not-allowed opacity-40"
                         : "cursor-pointer",
                     ].join(" ")}
                     style={
@@ -202,7 +191,7 @@ export default function TrackerComparison(_props: TrackerComparisonProps) {
                         : undefined
                     }
                   >
-                    {isSelected && <X className="w-3 h-3 shrink-0" />}
+                    {isSelected && <X className="h-3 w-3 shrink-0" />}
                     {tracker.name}
                   </button>
                 );
@@ -212,17 +201,13 @@ export default function TrackerComparison(_props: TrackerComparisonProps) {
 
           {/* Selected badges + clear */}
           {selectedIds.length > 0 && (
-            <div className="flex items-center gap-2 flex-wrap pt-3 border-t">
-              <span className="text-xs text-muted-foreground">Selected:</span>
+            <div className="flex flex-wrap items-center gap-2 border-t pt-3">
+              <span className="text-muted-foreground text-xs">Selected:</span>
               {selectedIds.map((id, idx) => {
                 const tracker = trackers?.find((t) => t.id === id);
                 const color = getTrackerColor(tracker, idx);
                 return (
-                  <Badge
-                    key={id}
-                    variant="outline"
-                    style={{ borderColor: color, color }}
-                  >
+                  <Badge key={id} variant="outline" style={{ borderColor: color, color }}>
                     {tracker?.name ?? id}
                   </Badge>
                 );
@@ -230,7 +215,7 @@ export default function TrackerComparison(_props: TrackerComparisonProps) {
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-6 text-xs text-muted-foreground ml-auto"
+                className="text-muted-foreground ml-auto h-6 text-xs"
                 onClick={() => setSelectedIds([])}
               >
                 Clear all
@@ -244,7 +229,7 @@ export default function TrackerComparison(_props: TrackerComparisonProps) {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
-            <BarChart2 className="w-5 h-5" />
+            <BarChart2 className="h-5 w-5" />
             Activity Comparison
           </CardTitle>
         </CardHeader>
@@ -252,15 +237,12 @@ export default function TrackerComparison(_props: TrackerComparisonProps) {
         <CardContent>
           {/* Per-tracker stats error banner */}
           {statsErrors.length > 0 && (
-            <div className="mb-4 flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-              <AlertCircle className="mt-0.5 w-4 h-4 shrink-0" />
+            <div className="border-destructive/30 bg-destructive/10 text-destructive mb-4 flex items-start gap-2 rounded-md border px-3 py-2 text-sm">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
               <span>
                 Could not load stats for:{" "}
                 {statsErrors
-                  .map(
-                    ({ id }) =>
-                      trackers?.find((t) => t.id === id)?.name ?? id
-                  )
+                  .map(({ id }) => trackers?.find((t) => t.id === id)?.name ?? id)
                   .join(", ")}
                 . They are excluded from the chart.
               </span>
@@ -269,24 +251,17 @@ export default function TrackerComparison(_props: TrackerComparisonProps) {
 
           {selectedIds.length < 2 ? (
             <div className="flex h-48 items-center justify-center">
-              <p className="text-muted-foreground text-sm text-center max-w-xs">
+              <p className="text-muted-foreground max-w-xs text-center text-sm">
                 Select 2 to 4 trackers to compare their activity
               </p>
             </div>
           ) : isStatsLoading ? (
             <div className="flex h-48 items-center justify-center">
-              <p className="text-sm text-muted-foreground">Loading stats…</p>
+              <p className="text-muted-foreground text-sm">Loading stats…</p>
             </div>
           ) : showChart ? (
-            <ChartContainer
-              id="tracker-comparison"
-              config={chartConfig}
-              className="w-full h-72"
-            >
-              <BarChart
-                data={chartData}
-                margin={{ top: 10, right: 20, left: 10, bottom: 20 }}
-              >
+            <ChartContainer id="tracker-comparison" config={chartConfig} className="h-72 w-full">
+              <BarChart data={chartData} margin={{ top: 10, right: 20, left: 10, bottom: 20 }}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="period" />
                 <YAxis allowDecimals={false} />
@@ -307,7 +282,7 @@ export default function TrackerComparison(_props: TrackerComparisonProps) {
             </ChartContainer>
           ) : (
             <div className="flex h-48 items-center justify-center">
-              <p className="text-muted-foreground text-sm text-center max-w-xs">
+              <p className="text-muted-foreground max-w-xs text-center text-sm">
                 Not enough data to compare. Try selecting different trackers.
               </p>
             </div>

@@ -22,9 +22,12 @@ const TaskSchema = z.object({
   title: z.string().min(1, "Title is required").max(200, "Title cannot exceed 200 characters"),
   description: z
     .string()
-    .max(5000, "Description cannot exceed 5000 characters")
+    .max(20000, "Description cannot exceed 20000 characters")
     .optional()
     .nullable(),
+  startDate: z.coerce.date().optional().nullable(),
+  dueDate: z.coerce.date().optional().nullable(),
+  priority: z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"]).optional().nullable(),
   assigneeId: z.string().optional().nullable(),
 });
 
@@ -70,6 +73,9 @@ export async function createTask(
       data: {
         title: validated.title,
         description: validated.description ?? null,
+        startDate: validated.startDate ?? null,
+        dueDate: validated.dueDate ?? null,
+        priority: validated.priority ?? "MEDIUM",
         assigneeId: validated.assigneeId ?? null,
         order: (lastTask?.order ?? -1) + 1,
         columnId,
@@ -111,6 +117,9 @@ export async function updateTask(
       data: {
         title: validated.title,
         description: validated.description ?? null,
+        startDate: validated.startDate ?? null,
+        dueDate: validated.dueDate ?? null,
+        priority: validated.priority ?? "MEDIUM",
         assigneeId: validated.assigneeId ?? null,
       },
       include: {
