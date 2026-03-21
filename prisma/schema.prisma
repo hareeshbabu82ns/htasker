@@ -27,6 +27,8 @@ model User {
   accounts      Account[]
   trackers      Tracker[]
   apiTokens     ApiToken[]
+  boards        Board[]
+  assignedTasks BoardTask[] @relation("assignedTasks")
 }
 
 // API token model for programmatic access
@@ -143,4 +145,51 @@ enum TrackerStatus {
   ACTIVE // Currently running (for timers)
   INACTIVE // Not running but available  
   ARCHIVED // No longer in use
+}
+
+// Board model for Kanban task boards
+model Board {
+  id          String        @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  description String?
+  userId      String        @db.ObjectId
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  columns     BoardColumn[]
+  tasks       BoardTask[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([userId])
+}
+
+// Board column (e.g. To Do, In Progress, Done)
+model BoardColumn {
+  id      String      @id @default(auto()) @map("_id") @db.ObjectId
+  name    String
+  order   Int
+  boardId String      @db.ObjectId
+  board   Board       @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  tasks   BoardTask[]
+
+  @@index([boardId])
+}
+
+// Individual task within a board column
+model BoardTask {
+  id          String      @id @default(auto()) @map("_id") @db.ObjectId
+  title       String
+  description String?
+  order       Int
+  columnId    String      @db.ObjectId
+  column      BoardColumn @relation(fields: [columnId], references: [id], onDelete: Cascade)
+  boardId     String      @db.ObjectId
+  board       Board       @relation(fields: [boardId], references: [id])
+  assigneeId  String?     @db.ObjectId
+  assignee    User?       @relation("assignedTasks", fields: [assigneeId], references: [id])
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@index([columnId])
+  @@index([boardId])
+  @@index([assigneeId])
 }

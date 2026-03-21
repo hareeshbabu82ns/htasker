@@ -119,3 +119,46 @@ export type ApiError =
       fields: Record<string, string>;
     }
   | { code: "SERVER_ERROR"; message: string };
+
+// Board (Kanban) types
+export interface Board {
+  id: string;
+  name: string;
+  description?: string | null;
+  userId: string;
+  columns: BoardColumn[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface BoardColumn {
+  id: string;
+  name: string;
+  order: number;
+  boardId: string;
+  tasks: BoardTask[];
+}
+
+export interface BoardTask {
+  id: string;
+  title: string;
+  description?: string | null;
+  order: number;
+  columnId: string;
+  boardId: string;
+  assigneeId?: string | null;
+  assignee?: Pick<User, "id" | "name" | "email" | "image"> | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export type BoardFormValues = {
+  name: string;
+  description?: string;
+};
+
+export type BoardTaskFormValues = {
+  title: string;
+  description?: string;
+  assigneeId?: string | null;
+};
