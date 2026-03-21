@@ -16,8 +16,19 @@ import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { KanbanColumn } from "./KanbanColumn";
 import { TaskCardOverlay } from "./TaskCard";
 import { TaskDialog } from "./TaskDialog";
+import { TaskDetailSheet } from "./TaskDetailSheet";
 import { AddColumnDialog } from "./AddColumnDialog";
 import { CreateBoardDialog } from "./CreateBoardDialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Plus, Settings2, ArrowLeft } from "lucide-react";
 import { useMoveTaskMutation, useDeleteColumnMutation } from "@/hooks/useBoardQuery";
@@ -31,14 +42,26 @@ interface KanbanBoardProps {
 
 export function KanbanBoard({ board }: KanbanBoardProps) {
   const [activeTask, setActiveTask] = useState<BoardTask | null>(null);
-  const [taskDialog, setTaskDialog] = useState<{
-    open: boolean;
-    columnId: string;
-    task?: BoardTask;
-  }>({ open: false, columnId: "" });
+
+  // Sheet for viewing/editing existing tasks
+  const [taskSheet, setTaskSheet] = useState<{ open: boolean; task: BoardTask | null }>({
+    open: false,
+    task: null,
+  });
+
+  // Dialog only for creating new tasks
+  const [newTaskDialog, setNewTaskDialog] = useState<{ open: boolean; columnId: string }>({
+    open: false,
+    columnId: "",
+  });
+
   const [showAddColumn, setShowAddColumn] = useState(false);
   const [editColumn, setEditColumn] = useState<{ id: string; name: string } | null>(null);
   const [showEditBoard, setShowEditBoard] = useState(false);
+  const [deleteColumnTarget, setDeleteColumnTarget] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
 
   const moveMutation = useMoveTaskMutation(board.id);
   const deleteColumnMutation = useDeleteColumnMutation(board.id);
@@ -79,11 +102,9 @@ export function KanbanBoard({ board }: KanbanBoardProps) {
 
     const overData = over.data.current;
     if (overData?.type === "column") {
-      // Dropped on empty column
       targetColumnId = over.id as string;
       newOrder = 0;
     } else if (overData?.type === "task") {
-      // Dropped on another task
       const overTask = overData.task as BoardTask;
       targetColumnId = overTask.columnId;
       const targetCol = board.columns.find((c) => c.id === targetColumnId);
@@ -91,7 +112,6 @@ export function KanbanBoard({ board }: KanbanBoardProps) {
       newOrder = targetCol.tasks.findIndex((t) => t.id === overTask.id);
       if (newOrder === -1) newOrder = targetCol.tasks.length;
     } else {
-      // Dropped on column droppable area
       targetColumnId = over.id as string;
       const targetCol = board.columns.find((c) => c.id === targetColumnId);
       newOrder = targetCol ? targetCol.tasks.length : 0;
@@ -109,14 +129,16 @@ export function KanbanBoard({ board }: KanbanBoardProps) {
     );
   };
 
-  const handleDragOver = (_event: DragOverEvent) => {
-    // Handled by dnd-kit closestCorners
-  };
+  const handleDragOver = (_event: DragOverEvent) => {};
 
-  const handleDeleteColumn = (columnId: string, name: string) => {
-    if (!confirm(`Delete column "${name}"? All tasks in it will be deleted.`)) return;
-    deleteColumnMutation.mutate(columnId, {
-      onError: (err) => toast.error(err.message),
+  const handleDeleteColumn = () => {
+    if (!deleteColumnTarget) return;
+    deleteColumnMutation.mutate(deleteColumnTarget.id, {
+      onSuccess: () => setDeleteColumnTarget(null),
+      onError: (err) => {
+        toast.error(err.message);
+        setDeleteColumnTarget(null);
+      },
     });
   };
 
@@ -155,7 +177,7 @@ export function KanbanBoard({ board }: KanbanBoardProps) {
         </div>
       </div>
 
-      {/* Kanban columns - horizontal scroll */}
+      {/* Kanban columns — fluid, horizontal scroll when needed */}
       <div className="flex-1 overflow-x-auto pb-4">
         <DndContext
           sensors={sensors}
@@ -164,46 +186,47 @@ export function KanbanBoard({ board }: KanbanBoardProps) {
           onDragEnd={handleDragEnd}
           onDragOver={handleDragOver}
         >
-          <div className="flex gap-4" style={{ minHeight: 200 }}>
+          <div className="flex h-full min-h-[200px] gap-4">
             {board.columns.map((column) => (
               <KanbanColumn
                 key={column.id}
                 column={column}
-                onAddTask={() => setTaskDialog({ open: true, columnId: column.id })}
-                onEditTask={(taskId) => {
+                onAddTask={() => setNewTaskDialog({ open: true, columnId: column.id })}
+                onViewTask={(taskId) => {
                   const task = column.tasks.find((t) => t.id === taskId);
-                  if (task) setTaskDialog({ open: true, columnId: column.id, task });
+                  if (task) setTaskSheet({ open: true, task });
                 }}
                 onEditColumn={() => setEditColumn({ id: column.id, name: column.name })}
-                onDeleteColumn={() => handleDeleteColumn(column.id, column.name)}
+                onDeleteColumn={() => setDeleteColumnTarget({ id: column.id, name: column.name })}
               />
             ))}
-
-            {/* Add column button (inline) */}
-            <button
-              onClick={() => setShowAddColumn(true)}
-              className="text-muted-foreground hover:text-foreground hover:bg-muted/50 flex min-w-[280px] items-center justify-center rounded-xl border border-dashed transition-colors"
-              aria-label="Add a new column"
-            >
-              <Plus className="mr-2 h-5 w-5" />
-              Add column
-            </button>
           </div>
 
           <DragOverlay>{activeTask ? <TaskCardOverlay task={activeTask} /> : null}</DragOverlay>
         </DndContext>
       </div>
 
-      {/* Dialogs */}
-      <TaskDialog
-        open={taskDialog.open}
+      {/* Task detail sheet (view/edit existing tasks) */}
+      <TaskDetailSheet
+        open={taskSheet.open}
         onOpenChange={(open) => {
-          if (!open) setTaskDialog({ open: false, columnId: "" });
+          if (!open) setTaskSheet({ open: false, task: null });
         }}
         boardId={board.id}
-        columnId={taskDialog.columnId}
-        task={taskDialog.task}
+        task={taskSheet.task}
       />
+
+      {/* Dialog for creating new tasks */}
+      <TaskDialog
+        open={newTaskDialog.open}
+        onOpenChange={(open) => {
+          if (!open) setNewTaskDialog({ open: false, columnId: "" });
+        }}
+        boardId={board.id}
+        columnId={newTaskDialog.columnId}
+      />
+
+      {/* Add / rename column dialogs */}
       <AddColumnDialog open={showAddColumn} onOpenChange={setShowAddColumn} boardId={board.id} />
       {editColumn && (
         <AddColumnDialog
@@ -215,7 +238,36 @@ export function KanbanBoard({ board }: KanbanBoardProps) {
           column={editColumn}
         />
       )}
+
+      {/* Board settings */}
       <CreateBoardDialog open={showEditBoard} onOpenChange={setShowEditBoard} board={board} />
+
+      {/* Column delete confirmation */}
+      <AlertDialog
+        open={!!deleteColumnTarget}
+        onOpenChange={(open) => {
+          if (!open) setDeleteColumnTarget(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete column?</AlertDialogTitle>
+            <AlertDialogDescription>
+              &ldquo;{deleteColumnTarget?.name}&rdquo; and all its tasks will be permanently
+              deleted. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteColumn}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

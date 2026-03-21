@@ -1,6 +1,16 @@
 "use client";
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -39,6 +49,7 @@ interface TaskDialogProps {
 export function TaskDialog({ open, onOpenChange, boardId, columnId, task }: TaskDialogProps) {
   const isEdit = !!task;
   const [showPreview, setShowPreview] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const createMutation = useCreateTaskMutation(boardId);
   const updateMutation = useUpdateTaskMutation(boardId);
   const deleteMutation = useDeleteTaskMutation(boardId);
@@ -90,10 +101,11 @@ export function TaskDialog({ open, onOpenChange, boardId, columnId, task }: Task
   };
 
   const handleDelete = async () => {
-    if (!task || !confirm("Delete this task?")) return;
+    if (!task) return;
     try {
       await deleteMutation.mutateAsync(task.id);
       toast.success("Task deleted");
+      setShowDeleteConfirm(false);
       onOpenChange(false);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to delete");
@@ -101,97 +113,119 @@ export function TaskDialog({ open, onOpenChange, boardId, columnId, task }: Task
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
-        <DialogHeader>
-          <div className="flex items-center justify-between">
-            <DialogTitle>{isEdit ? "Edit Task" : "New Task"}</DialogTitle>
-            {isEdit && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleDelete}
-                className="text-destructive hover:text-destructive"
-                aria-label="Delete task"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            )}
-          </div>
-        </DialogHeader>
-
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="task-title">Title</Label>
-            <Input
-              id="task-title"
-              placeholder="Task title"
-              {...register("title")}
-              aria-invalid={!!errors.title}
-            />
-            {errors.title && <p className="text-destructive text-sm">{errors.title.message}</p>}
-          </div>
-
-          <div className="space-y-2">
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+          <DialogHeader>
             <div className="flex items-center justify-between">
-              <Label htmlFor="task-description">Description (Markdown)</Label>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowPreview(!showPreview)}
-                className="h-auto px-2 py-1 text-xs"
-              >
-                {showPreview ? "Edit" : "Preview"}
-              </Button>
+              <DialogTitle>{isEdit ? "Edit Task" : "New Task"}</DialogTitle>
+              {isEdit && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="text-destructive hover:text-destructive"
+                  aria-label="Delete task"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
             </div>
-            {showPreview ? (
-              <div className="min-h-[120px] rounded-md border p-3">
-                {descriptionValue ? (
-                  <TaskDescription content={descriptionValue} boardId={boardId} />
-                ) : (
-                  <p className="text-muted-foreground text-sm italic">No description</p>
-                )}
-              </div>
-            ) : (
-              <Textarea
-                id="task-description"
-                placeholder="Describe the task... Use markdown and #taskId to reference tasks"
-                rows={5}
-                {...register("description")}
-                aria-invalid={!!errors.description}
-              />
-            )}
-            {errors.description && (
-              <p className="text-destructive text-sm">{errors.description.message}</p>
-            )}
-          </div>
+          </DialogHeader>
 
-          <div className="space-y-2">
-            <Label>Assignee</Label>
-            <Controller
-              control={control}
-              name="assigneeId"
-              render={({ field }) => (
-                <UserAssignment
-                  value={field.value}
-                  onSelect={field.onChange}
-                  assignee={task?.assignee}
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="task-title">Title</Label>
+              <Input
+                id="task-title"
+                placeholder="Task title"
+                {...register("title")}
+                aria-invalid={!!errors.title}
+              />
+              {errors.title && <p className="text-destructive text-sm">{errors.title.message}</p>}
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="task-description">Description (Markdown)</Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowPreview(!showPreview)}
+                  className="h-auto px-2 py-1 text-xs"
+                >
+                  {showPreview ? "Edit" : "Preview"}
+                </Button>
+              </div>
+              {showPreview ? (
+                <div className="min-h-[120px] rounded-md border p-3">
+                  {descriptionValue ? (
+                    <TaskDescription content={descriptionValue} boardId={boardId} />
+                  ) : (
+                    <p className="text-muted-foreground text-sm italic">No description</p>
+                  )}
+                </div>
+              ) : (
+                <Textarea
+                  id="task-description"
+                  placeholder="Describe the task... Use markdown and #taskId to reference tasks"
+                  rows={5}
+                  {...register("description")}
+                  aria-invalid={!!errors.description}
                 />
               )}
-            />
-          </div>
+              {errors.description && (
+                <p className="text-destructive text-sm">{errors.description.message}</p>
+              )}
+            </div>
 
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Saving..." : isEdit ? "Save" : "Create"}
-            </Button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
+            <div className="space-y-2">
+              <Label>Assignee</Label>
+              <Controller
+                control={control}
+                name="assigneeId"
+                render={({ field }) => (
+                  <UserAssignment
+                    value={field.value}
+                    onSelect={field.onChange}
+                    assignee={task?.assignee}
+                  />
+                )}
+              />
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? "Saving..." : isEdit ? "Save" : "Create"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete task?</AlertDialogTitle>
+            <AlertDialogDescription>
+              &ldquo;{task?.title}&rdquo; will be permanently deleted. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

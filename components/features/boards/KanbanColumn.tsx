@@ -16,7 +16,7 @@ import type { BoardColumn as BoardColumnType } from "@/types";
 interface KanbanColumnProps {
   column: BoardColumnType;
   onAddTask: () => void;
-  onEditTask: (taskId: string) => void;
+  onViewTask: (taskId: string) => void;
   onEditColumn: () => void;
   onDeleteColumn: () => void;
 }
@@ -24,7 +24,7 @@ interface KanbanColumnProps {
 export function KanbanColumn({
   column,
   onAddTask,
-  onEditTask,
+  onViewTask,
   onEditColumn,
   onDeleteColumn,
 }: KanbanColumnProps) {
@@ -36,7 +36,7 @@ export function KanbanColumn({
   const taskIds = column.tasks.map((t) => t.id);
 
   return (
-    <div className="bg-muted/50 flex max-w-[320px] min-w-[280px] shrink-0 flex-col rounded-xl md:min-w-[300px]">
+    <div className="bg-muted/50 flex min-w-[240px] flex-1 flex-col rounded-xl">
       {/* Column header */}
       <div className="flex items-center justify-between px-3 py-3">
         <div className="flex items-center gap-2">
@@ -90,7 +90,7 @@ export function KanbanColumn({
       >
         <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
           {column.tasks.map((task) => (
-            <TaskCard key={task.id} task={task} onClick={() => onEditTask(task.id)} />
+            <TaskCard key={task.id} task={task} onClick={() => onViewTask(task.id)} />
           ))}
         </SortableContext>
 
