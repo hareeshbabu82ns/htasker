@@ -3,16 +3,15 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Tracker, TrackerEntry, TrackerType } from "@/types";
+import { Tracker, TrackerType } from "@/types";
 import {
   useTrackerQuery,
-  useEntriesQuery,
   useAddEntryMutation,
   usePeriodStats,
   resolvePeriod,
 } from "@/hooks/useTrackerQuery";
-import { trackerKeys } from "@/hooks/queries/trackerQueries";
-import EntryPagination from "../EntryPagination";
+import { useTrackerEntries } from "@/hooks/useTrackerEntries";
+import TrackerEntryList from "../TrackerEntryList";
 import EditEntryModal from "../EditEntryModal";
 
 interface AmountTrackerProps {
@@ -23,14 +22,11 @@ interface AmountTrackerProps {
 export default function AmountTracker({ tracker, onUpdate }: AmountTrackerProps) {
   const queryClient = useQueryClient();
 
-  const [currentPage, setCurrentPage] = useState(1);
-  const [currentLimit, setCurrentLimit] = useState(10);
   const [amount, setAmount] = useState("");
   const [currency, setCurrency] = useState("USD");
   const [note, setNote] = useState("");
 
   const trackerQuery = useTrackerQuery(tracker.id);
-  const entriesQuery = useEntriesQuery(tracker.id, currentPage, currentLimit);
   const addEntryMutation = useAddEntryMutation(tracker.id);
   const periodStatsQuery = usePeriodStats(tracker.id);
   const { key: periodKey, label: periodLabel } = resolvePeriod(
@@ -43,18 +39,18 @@ export default function AmountTracker({ tracker, onUpdate }: AmountTrackerProps)
       ? (periodStatsQuery.data[periodKey] ?? 0)
       : (trackerQuery.data?.statistics?.totalValue ?? tracker.statistics?.totalValue ?? 0);
 
-  const displayedEntries = (entriesQuery.data?.entries ?? []) as TrackerEntry[];
-  const totalEntries = entriesQuery.data?.total ?? 0;
-  const isLoadingEntries = entriesQuery.isLoading;
+  const {
+    entries,
+    totalEntries,
+    isLoadingEntries,
+    currentPage,
+    setCurrentPage,
+    currentLimit,
+    setCurrentLimit,
+    handleEntryUpdated,
+  } = useTrackerEntries(tracker.id);
   const isCalculatingTotal = trackerQuery.isLoading;
 
-  const handleEntryUpdated = () => {
-    void queryClient.invalidateQueries({ queryKey: trackerKeys.detail(tracker.id) });
-    void queryClient.invalidateQueries({ queryKey: ["entries", tracker.id] });
-    void queryClient.invalidateQueries({ queryKey: trackerKeys.stats(tracker.id, "period") });
-  };
-
-  // Common currency options
   const currencies = [
     { code: "USD", symbol: "$" },
     { code: "EUR", symbol: "€" },
@@ -67,16 +63,6 @@ export default function AmountTracker({ tracker, onUpdate }: AmountTrackerProps)
     const currencyObj = currencies.find((c) => c.code === currency);
     if (!currencyObj || currencyObj.code === "None") return value.toFixed(2);
     return `${currencyObj.symbol}${value.toFixed(2)}`;
-  };
-
-  const formatDate = (date: Date) => {
-    return new Date(date).toLocaleDateString(undefined, {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -171,61 +157,51 @@ export default function AmountTracker({ tracker, onUpdate }: AmountTrackerProps)
       </form>
 
       {/* History section */}
-      <div className="mt-8">
-        <h3 className="mb-3 text-sm font-medium">Recent Entries</h3>
-
-        {isLoadingEntries ? (
-          <div className="p-4 text-center">
-            <p className="text-foreground/60">Loading entries...</p>
-          </div>
-        ) : displayedEntries.length > 0 ? (
-          <>
-            <div className="max-h-80 space-y-3 overflow-y-auto pr-1">
-              {displayedEntries.map((entry) => (
-                <div
-                  key={entry.id}
-                  className="bg-background/50 border-border dark:border-border flex items-center justify-between rounded-md border p-3"
-                >
-                  <div>
-                    <div className="font-medium">{formatCurrency(entry.value || 0)}</div>
-                    {entry.note && <div className="text-foreground/70 text-sm">{entry.note}</div>}
-                    <div className="text-foreground/50 text-xs">{formatDate(entry.date)}</div>
-                  </div>
-                  <div>
-                    {entry.tags?.map((tag) => (
-                      <span
-                        key={tag}
-                        className="bg-primary/10 text-primary inline-block rounded-full px-2 py-1 text-xs"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                    <EditEntryModal
-                      entry={entry}
-                      trackerType={TrackerType.AMOUNT}
-                      onSuccess={handleEntryUpdated}
-                    />
-                  </div>
-                </div>
-              ))}
+      <TrackerEntryList
+        entries={entries}
+        isLoading={isLoadingEntries}
+        totalEntries={totalEntries}
+        currentPage={currentPage}
+        currentLimit={currentLimit}
+        onPageChange={setCurrentPage}
+        onLimitChange={setCurrentLimit}
+        renderItem={(entry) => (
+          <div
+            key={entry.id}
+            className="bg-background/50 border-border dark:border-border flex items-center justify-between rounded-md border p-3"
+          >
+            <div>
+              <div className="font-medium">{formatCurrency(entry.value || 0)}</div>
+              {entry.note && <div className="text-foreground/70 text-sm">{entry.note}</div>}
+              <div className="text-foreground/50 text-xs">
+                {new Date(entry.date).toLocaleDateString(undefined, {
+                  year: "numeric",
+                  month: "short",
+                  day: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </div>
             </div>
-            <EntryPagination
-              currentPage={currentPage}
-              currentLimit={currentLimit}
-              totalEntries={totalEntries}
-              onPageChange={setCurrentPage}
-              onLimitChange={(limit) => {
-                setCurrentLimit(limit);
-                setCurrentPage(1);
-              }}
-            />
-          </>
-        ) : (
-          <div className="border-border rounded-md border border-dashed p-4 text-center">
-            <p className="text-foreground/60 text-sm">No recent entries to display</p>
+            <div>
+              {entry.tags?.map((tag) => (
+                <span
+                  key={tag}
+                  className="bg-primary/10 text-primary inline-block rounded-full px-2 py-1 text-xs"
+                >
+                  {tag}
+                </span>
+              ))}
+              <EditEntryModal
+                entry={entry}
+                trackerType={TrackerType.AMOUNT}
+                onSuccess={handleEntryUpdated}
+              />
+            </div>
           </div>
         )}
-      </div>
+        emptyMessage="No recent entries to display"
+      />
     </div>
   );
 }

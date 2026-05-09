@@ -6,13 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Tracker, TrackerEntry, TrackerType } from "@/types";
 import {
   useTrackerQuery,
-  useEntriesQuery,
   useTimerMutation,
   usePeriodStats,
   resolvePeriod,
 } from "@/hooks/useTrackerQuery";
-import { trackerKeys } from "@/hooks/queries/trackerQueries";
-import EntryPagination from "../EntryPagination";
+import { useTrackerEntries } from "@/hooks/useTrackerEntries";
+import TrackerEntryList from "../TrackerEntryList";
 import EditEntryModal from "../EditEntryModal";
 
 interface TimerTrackerProps {
@@ -28,8 +27,6 @@ export default function TimerTracker({ tracker, onUpdate }: TimerTrackerProps) {
   const [currentEntryId, setCurrentEntryId] = useState<string | null>(null);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [elapsedAccumulatedTime, setElapsedAccumulatedTime] = useState(0);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [currentLimit, setCurrentLimit] = useState(10);
   const [initialized, setInitialized] = useState(false);
 
   // Keep a ref to isRunning to safely read inside effects without re-subscribing
@@ -37,7 +34,6 @@ export default function TimerTracker({ tracker, onUpdate }: TimerTrackerProps) {
   isRunningRef.current = isRunning;
 
   const trackerQuery = useTrackerQuery(tracker.id);
-  const entriesQuery = useEntriesQuery(tracker.id, currentPage, currentLimit);
   const timerMutation = useTimerMutation(tracker.id);
   const periodStatsQuery = usePeriodStats(tracker.id);
   const { key: periodKey, label: periodLabel } = resolvePeriod(
@@ -45,11 +41,20 @@ export default function TimerTracker({ tracker, onUpdate }: TimerTrackerProps) {
     tracker.goalPeriod
   );
 
+  const {
+    entries,
+    totalEntries,
+    isLoadingEntries,
+    currentPage,
+    setCurrentPage,
+    currentLimit,
+    setCurrentLimit,
+    handleEntryUpdated,
+  } = useTrackerEntries(tracker.id);
+
   // One-time initialization: detect in-progress entry and load accumulated time
   useEffect(() => {
-    if (!entriesQuery.data || !trackerQuery.data || initialized) return;
-
-    const { entries } = entriesQuery.data;
+    if (!entries || entries.length === 0 || !trackerQuery.data || initialized) return;
 
     const inProgressEntry = entries.find(
       (entry) =>
@@ -75,7 +80,7 @@ export default function TimerTracker({ tracker, onUpdate }: TimerTrackerProps) {
     setElapsedTime(totalMs);
     setInitialized(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [entriesQuery.data, trackerQuery.data, periodStatsQuery.data]);
+  }, [entries, trackerQuery.data, periodStatsQuery.data]);
 
   // After a stop + re-fetch, or when period stats arrive, update accumulated base.
   // While running: recalculate base so elapsed display uses the correct period total.
@@ -112,6 +117,13 @@ export default function TimerTracker({ tracker, onUpdate }: TimerTrackerProps) {
     };
   }, [isRunning, startTime, elapsedAccumulatedTime]);
 
+  const completedEntries = (entries ?? []).filter(
+    (entry) =>
+      entry.startTime &&
+      entry.endTime &&
+      new Date(entry.startTime).getTime() !== new Date(entry.endTime).getTime()
+  ) as TrackerEntry[];
+
   const formatTime = (milliseconds: number) => {
     const totalSeconds = Math.floor(milliseconds / 1000);
     const hours = Math.floor(totalSeconds / 3600);
@@ -120,16 +132,6 @@ export default function TimerTracker({ tracker, onUpdate }: TimerTrackerProps) {
     const pad = (n: number) => n.toString().padStart(2, "0");
     return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
   };
-
-  const formatDate = (dateString: string | Date) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  };
-
-  const calculateDuration = (s: Date, e: Date) => new Date(e).getTime() - new Date(s).getTime();
 
   const handleStart = () => {
     const now = new Date();
@@ -156,7 +158,6 @@ export default function TimerTracker({ tracker, onUpdate }: TimerTrackerProps) {
   const handleStop = () => {
     if (!startTime || !currentEntryId) return;
 
-    const duration = new Date().getTime() - startTime.getTime();
     const capturedEntryId = currentEntryId;
     const capturedStartTime = startTime;
 
@@ -165,45 +166,26 @@ export default function TimerTracker({ tracker, onUpdate }: TimerTrackerProps) {
     setStartTime(null);
     setCurrentEntryId(null);
 
-    if (duration >= 1000) {
-      timerMutation.mutate(
-        { action: "stop", entryId: capturedEntryId, startTime: capturedStartTime },
-        {
-          onSuccess: () => {
-            if (onUpdate) onUpdate();
-          },
-          onError: () => {
-            // Restore local timer state so the user can retry
-            setIsRunning(true);
-            setStartTime(capturedStartTime);
-            setCurrentEntryId(capturedEntryId);
-          },
-        }
-      );
-    }
-  };
-
-  const handleEntryUpdated = () => {
-    void queryClient.invalidateQueries({ queryKey: trackerKeys.detail(tracker.id) });
-    void queryClient.invalidateQueries({ queryKey: ["entries", tracker.id] });
-    void queryClient.invalidateQueries({ queryKey: trackerKeys.stats(tracker.id, "period") });
+    timerMutation.mutate(
+      { action: "stop", entryId: capturedEntryId, startTime: capturedStartTime },
+      {
+        onSuccess: () => {
+          if (onUpdate) onUpdate();
+        },
+        onError: () => {
+          // Restore local timer state so the user can retry
+          setIsRunning(true);
+          setStartTime(capturedStartTime);
+          setCurrentEntryId(capturedEntryId);
+        },
+      }
+    );
   };
 
   const getButtonColorClass = () =>
     tracker.color
       ? `bg-[${tracker.color}] hover:bg-[${tracker.color}]/90`
       : "bg-primary hover:bg-primary/90";
-
-  // Completed entries only (filter out in-progress)
-  const completedEntries = (entriesQuery.data?.entries ?? []).filter(
-    (entry) =>
-      entry.startTime &&
-      entry.endTime &&
-      new Date(entry.startTime).getTime() !== new Date(entry.endTime).getTime()
-  ) as TrackerEntry[];
-
-  const totalEntries = entriesQuery.data?.total ?? 0;
-  const isLoadingEntries = entriesQuery.isLoading;
 
   return (
     <div className="bg-background border-border rounded-lg border p-6 shadow-sm">
@@ -240,59 +222,51 @@ export default function TimerTracker({ tracker, onUpdate }: TimerTrackerProps) {
       </div>
 
       {/* History section */}
-      <div className="mt-8">
-        <h3 className="mb-3 text-sm font-medium">Recent Sessions</h3>
-        {isLoadingEntries ? (
-          <div className="flex justify-center p-4">
-            <div className="border-primary h-6 w-6 animate-spin rounded-full border-t-2 border-b-2"></div>
-          </div>
-        ) : completedEntries.length > 0 ? (
-          <>
-            <div className="space-y-3">
-              {completedEntries.map((entry) =>
-                entry.startTime && entry.endTime ? (
-                  <div key={entry.id} className="border-border rounded-md border p-3 text-sm">
-                    <div className="flex items-center justify-between">
-                      <div className="font-medium">{formatDate(entry.date)}</div>
-                      <div className="flex items-center gap-1">
-                        <span className="text-foreground/70">
-                          {formatTime(calculateDuration(entry.startTime, entry.endTime))}
-                        </span>
-                        <EditEntryModal
-                          entry={entry}
-                          trackerType={TrackerType.TIMER}
-                          onSuccess={handleEntryUpdated}
-                        />
-                      </div>
-                    </div>
-                    <div className="text-foreground/60 mt-1 flex justify-between text-xs">
-                      <div>
-                        {new Date(entry.startTime).toLocaleTimeString()} -{" "}
-                        {new Date(entry.endTime).toLocaleTimeString()}
-                      </div>
-                      {entry.note && <div className="italic">{entry.note}</div>}
-                    </div>
-                  </div>
-                ) : null
-              )}
+      <TrackerEntryList
+        entries={completedEntries}
+        isLoading={isLoadingEntries}
+        totalEntries={totalEntries}
+        currentPage={currentPage}
+        currentLimit={currentLimit}
+        onPageChange={setCurrentPage}
+        onLimitChange={setCurrentLimit}
+        renderItem={(entry) =>
+          entry.startTime && entry.endTime ? (
+            <div key={entry.id} className="border-border rounded-md border p-3 text-sm">
+              <div className="flex items-center justify-between">
+                <div className="font-medium">
+                  {new Intl.DateTimeFormat("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  }).format(new Date(entry.date))}
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="text-foreground/70">
+                    {formatTime(
+                      new Date(entry.endTime).getTime() - new Date(entry.startTime).getTime()
+                    )}
+                  </span>
+                  <EditEntryModal
+                    entry={entry}
+                    trackerType={TrackerType.TIMER}
+                    onSuccess={handleEntryUpdated}
+                  />
+                </div>
+              </div>
+              <div className="text-foreground/60 mt-1 flex justify-between text-xs">
+                <div>
+                  {new Date(entry.startTime).toLocaleTimeString()} -{" "}
+                  {new Date(entry.endTime).toLocaleTimeString()}
+                </div>
+                {entry.note && <div className="italic">{entry.note}</div>}
+              </div>
             </div>
-            <EntryPagination
-              currentPage={currentPage}
-              currentLimit={currentLimit}
-              totalEntries={totalEntries}
-              onPageChange={setCurrentPage}
-              onLimitChange={(limit) => {
-                setCurrentLimit(limit);
-                setCurrentPage(1);
-              }}
-            />
-          </>
-        ) : (
-          <div className="border-border rounded-md border border-dashed p-4 text-center">
-            <p className="text-foreground/60 text-sm">No recent sessions to display</p>
-          </div>
-        )}
-      </div>
+          ) : null
+        }
+        emptyMessage="No recent sessions to display"
+        sectionTitle="Recent Sessions"
+      />
     </div>
   );
 }

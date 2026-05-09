@@ -3,18 +3,13 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Tracker, TrackerEntry, TrackerType } from "@/types";
-import {
-  useEntriesQuery,
-  useAddEntryMutation,
-  usePeriodStats,
-  resolvePeriod,
-} from "@/hooks/useTrackerQuery";
-import { trackerKeys } from "@/hooks/queries/trackerQueries";
+import { Tracker, TrackerType } from "@/types";
+import { useAddEntryMutation, usePeriodStats, resolvePeriod } from "@/hooks/useTrackerQuery";
+import { useTrackerEntries } from "@/hooks/useTrackerEntries";
+import TrackerEntryList from "../TrackerEntryList";
+import EditEntryModal from "../EditEntryModal";
 import { getOccurrenceStreak } from "@/app/actions/entries";
 import { Flame } from "lucide-react";
-import EntryPagination from "../EntryPagination";
-import EditEntryModal from "../EditEntryModal";
 
 interface OccurrenceTrackerProps {
   tracker: Tracker;
@@ -40,44 +35,31 @@ export default function OccurrenceTracker({ tracker, onUpdate }: OccurrenceTrack
     },
   });
 
-  const [currentPage, setCurrentPage] = useState(1);
-  const [currentLimit, setCurrentLimit] = useState(10);
   const [note, setNote] = useState("");
 
   const today = new Date();
   const formattedToday = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
   const [selectedDate, setSelectedDate] = useState(formattedToday);
 
-  const entriesQuery = useEntriesQuery(tracker.id, currentPage, currentLimit);
   const addEntryMutation = useAddEntryMutation(tracker.id);
 
-  const entries = (entriesQuery.data?.entries ?? []) as TrackerEntry[];
-  const totalEntries = entriesQuery.data?.total ?? 0;
-  const isLoadingEntries = entriesQuery.isLoading;
+  const {
+    entries,
+    totalEntries,
+    isLoadingEntries,
+    currentPage,
+    setCurrentPage,
+    currentLimit,
+    setCurrentLimit,
+    handleEntryUpdated,
+  } = useTrackerEntries(tracker.id);
 
-  // Days since last occurrence (derived from latest entry)
   const daysSinceLastOccurrence = (() => {
     if (entries.length === 0) return 0;
     const lastDate = new Date(entries[0].date);
     const diffTime = Math.abs(today.getTime() - lastDate.getTime());
     return Math.floor(diffTime / (1000 * 60 * 60 * 24));
   })();
-
-  const handleEntryUpdated = () => {
-    void queryClient.invalidateQueries({ queryKey: trackerKeys.detail(tracker.id) });
-    void queryClient.invalidateQueries({ queryKey: ["entries", tracker.id] });
-    void queryClient.invalidateQueries({ queryKey: ["occurrenceStreak", tracker.id] });
-    void queryClient.invalidateQueries({ queryKey: trackerKeys.stats(tracker.id, "period") });
-  };
-
-  const formatDate = (date: Date) => {
-    return new Intl.DateTimeFormat("en-US", {
-      weekday: "short",
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    }).format(new Date(date));
-  };
 
   const handleLogOccurrence = () => {
     addEntryMutation.mutate(
@@ -91,7 +73,6 @@ export default function OccurrenceTracker({ tracker, onUpdate }: OccurrenceTrack
         onSuccess: () => {
           setNote("");
           setSelectedDate(formattedToday);
-          // Streak also needs refreshing
           void queryClient.invalidateQueries({
             queryKey: ["occurrenceStreak", tracker.id],
           });
@@ -185,48 +166,39 @@ export default function OccurrenceTracker({ tracker, onUpdate }: OccurrenceTrack
       </div>
 
       {/* History section */}
-      <div className="mt-8">
-        <h3 className="mb-3 text-sm font-medium">Recent Occurrences</h3>
-        {isLoadingEntries ? (
-          <div className="flex justify-center p-4">
-            <div className="border-primary h-6 w-6 animate-spin rounded-full border-t-2 border-b-2"></div>
-          </div>
-        ) : entries.length > 0 ? (
-          <>
-            <div className="space-y-3">
-              {entries.map((entry) => (
-                <div key={entry.id} className="border-border rounded-md border p-3 text-sm">
-                  <div className="flex items-center justify-between">
-                    <div className="font-medium">{formatDate(entry.date)}</div>
-                    <EditEntryModal
-                      entry={entry}
-                      trackerType={TrackerType.OCCURRENCE}
-                      onSuccess={handleEntryUpdated}
-                    />
-                  </div>
-                  {entry.note && (
-                    <div className="text-foreground/70 mt-1 text-sm italic">{entry.note}</div>
-                  )}
-                </div>
-              ))}
+      <TrackerEntryList
+        entries={entries}
+        isLoading={isLoadingEntries}
+        totalEntries={totalEntries}
+        currentPage={currentPage}
+        currentLimit={currentLimit}
+        onPageChange={setCurrentPage}
+        onLimitChange={setCurrentLimit}
+        renderItem={(entry) => (
+          <div key={entry.id} className="border-border rounded-md border p-3 text-sm">
+            <div className="flex items-center justify-between">
+              <div className="font-medium">
+                {new Intl.DateTimeFormat("en-US", {
+                  weekday: "short",
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                }).format(new Date(entry.date))}
+              </div>
+              <EditEntryModal
+                entry={entry}
+                trackerType={TrackerType.OCCURRENCE}
+                onSuccess={handleEntryUpdated}
+              />
             </div>
-            <EntryPagination
-              currentPage={currentPage}
-              currentLimit={currentLimit}
-              totalEntries={totalEntries}
-              onPageChange={setCurrentPage}
-              onLimitChange={(limit) => {
-                setCurrentLimit(limit);
-                setCurrentPage(1);
-              }}
-            />
-          </>
-        ) : (
-          <div className="border-border rounded-md border border-dashed p-4 text-center">
-            <p className="text-foreground/60 text-sm">No recent occurrences to display</p>
+            {entry.note && (
+              <div className="text-foreground/70 mt-1 text-sm italic">{entry.note}</div>
+            )}
           </div>
         )}
-      </div>
+        emptyMessage="No recent occurrences to display"
+        sectionTitle="Recent Occurrences"
+      />
     </div>
   );
 }

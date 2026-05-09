@@ -1,17 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Tracker, TrackerEntry, TrackerType } from "@/types";
-import {
-  useEntriesQuery,
-  useAddEntryMutation,
-  usePeriodStats,
-  resolvePeriod,
-} from "@/hooks/useTrackerQuery";
-import { trackerKeys } from "@/hooks/queries/trackerQueries";
-import EntryPagination from "../EntryPagination";
+import { Tracker, TrackerType } from "@/types";
+import { useAddEntryMutation, usePeriodStats, resolvePeriod } from "@/hooks/useTrackerQuery";
+import { useTrackerEntries } from "@/hooks/useTrackerEntries";
+import TrackerEntryList from "../TrackerEntryList";
 import EditEntryModal from "../EditEntryModal";
 
 interface CustomTrackerProps {
@@ -20,16 +14,11 @@ interface CustomTrackerProps {
 }
 
 export default function CustomTracker({ tracker, onUpdate }: CustomTrackerProps) {
-  const queryClient = useQueryClient();
-
   const [value, setValue] = useState("");
   const [note, setNote] = useState("");
   const [customTags, setCustomTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [currentLimit, setCurrentLimit] = useState(10);
 
-  const entriesQuery = useEntriesQuery(tracker.id, currentPage, currentLimit);
   const addEntryMutation = useAddEntryMutation(tracker.id);
   const periodStatsQuery = usePeriodStats(tracker.id);
   const { key: periodKey, label: periodLabel } = resolvePeriod(
@@ -37,25 +26,16 @@ export default function CustomTracker({ tracker, onUpdate }: CustomTrackerProps)
     tracker.goalPeriod
   );
 
-  const entries = (entriesQuery.data?.entries ?? []) as TrackerEntry[];
-  const totalEntries = entriesQuery.data?.total ?? 0;
-  const isLoadingEntries = entriesQuery.isLoading;
-
-  const handleEntryUpdated = () => {
-    void queryClient.invalidateQueries({ queryKey: trackerKeys.detail(tracker.id) });
-    void queryClient.invalidateQueries({ queryKey: ["entries", tracker.id] });
-    void queryClient.invalidateQueries({ queryKey: trackerKeys.stats(tracker.id, "period") });
-  };
-
-  const formatDate = (date: Date) => {
-    return new Intl.DateTimeFormat("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-    }).format(new Date(date));
-  };
+  const {
+    entries,
+    totalEntries,
+    isLoadingEntries,
+    currentPage,
+    setCurrentPage,
+    currentLimit,
+    setCurrentLimit,
+    handleEntryUpdated,
+  } = useTrackerEntries(tracker.id);
 
   const handleAddTag = () => {
     if (tagInput.trim() && !customTags.includes(tagInput.trim())) {
@@ -111,7 +91,8 @@ export default function CustomTracker({ tracker, onUpdate }: CustomTrackerProps)
             {periodStatsQuery.data[periodKey] ?? 0}
           </div>
           <div className="text-foreground/70 text-sm">
-            {(periodStatsQuery.data[periodKey] ?? 0) === 1 ? "entry" : "entries"} — {periodLabel}
+            {(periodStatsQuery.data[periodKey] ?? 0) === 1 ? "entry" : "entries"} &mdash;{" "}
+            {periodLabel}
           </div>
         </div>
       )}
@@ -211,68 +192,55 @@ export default function CustomTracker({ tracker, onUpdate }: CustomTrackerProps)
       </form>
 
       {/* History section */}
-      <div className="mt-8">
-        <h3 className="mb-3 text-sm font-medium">Recent Entries</h3>
-        {isLoadingEntries ? (
-          <div className="flex justify-center p-4">
-            <div className="border-primary h-6 w-6 animate-spin rounded-full border-t-2 border-b-2"></div>
-          </div>
-        ) : entries.length > 0 ? (
-          <>
-            <div className="space-y-3">
-              {entries.map((entry) => (
-                <div key={entry.id} className="border-border rounded-md border p-3 text-sm">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-grow">
-                      {entry.value !== null && entry.value !== undefined && (
-                        <div className="font-medium">Value: {entry.value}</div>
-                      )}
-                      {entry.note && (
-                        <div className="text-foreground/70 mt-1 text-sm">{entry.note}</div>
-                      )}
-                      <div className="text-foreground/50 mt-1 text-xs">
-                        {formatDate(entry.date)}
-                      </div>
-                    </div>
-
-                    {entry.tags && entry.tags.length > 0 && (
-                      <div className="ml-2 flex flex-wrap gap-1">
-                        {entry.tags.map((tag) => (
-                          <span
-                            key={tag}
-                            className="bg-primary/10 text-primary inline-block rounded-full px-2 py-0.5 text-xs"
-                          >
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                    <EditEntryModal
-                      entry={entry}
-                      trackerType={TrackerType.CUSTOM}
-                      onSuccess={handleEntryUpdated}
-                    />
-                  </div>
+      <TrackerEntryList
+        entries={entries}
+        isLoading={isLoadingEntries}
+        totalEntries={totalEntries}
+        currentPage={currentPage}
+        currentLimit={currentLimit}
+        onPageChange={setCurrentPage}
+        onLimitChange={setCurrentLimit}
+        renderItem={(entry) => (
+          <div key={entry.id} className="border-border rounded-md border p-3 text-sm">
+            <div className="flex items-start justify-between">
+              <div className="flex-grow">
+                {entry.value !== null && entry.value !== undefined && (
+                  <div className="font-medium">Value: {entry.value}</div>
+                )}
+                {entry.note && <div className="text-foreground/70 mt-1 text-sm">{entry.note}</div>}
+                <div className="text-foreground/50 mt-1 text-xs">
+                  {new Intl.DateTimeFormat("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                    hour: "numeric",
+                    minute: "2-digit",
+                  }).format(new Date(entry.date))}
                 </div>
-              ))}
+              </div>
+
+              {entry.tags && entry.tags.length > 0 && (
+                <div className="ml-2 flex flex-wrap gap-1">
+                  {entry.tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="bg-primary/10 text-primary inline-block rounded-full px-2 py-0.5 text-xs"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+              <EditEntryModal
+                entry={entry}
+                trackerType={TrackerType.CUSTOM}
+                onSuccess={handleEntryUpdated}
+              />
             </div>
-            <EntryPagination
-              currentPage={currentPage}
-              currentLimit={currentLimit}
-              totalEntries={totalEntries}
-              onPageChange={setCurrentPage}
-              onLimitChange={(limit) => {
-                setCurrentLimit(limit);
-                setCurrentPage(1);
-              }}
-            />
-          </>
-        ) : (
-          <div className="border-border rounded-md border border-dashed p-4 text-center">
-            <p className="text-foreground/60 text-sm">No recent entries to display</p>
           </div>
         )}
-      </div>
+        emptyMessage="No recent entries to display"
+      />
     </div>
   );
 }

@@ -3,16 +3,15 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Tracker, TrackerEntry, TrackerType } from "@/types";
+import { Tracker, TrackerType } from "@/types";
 import {
   useTrackerQuery,
-  useEntriesQuery,
   useCounterMutation,
   usePeriodStats,
   resolvePeriod,
 } from "@/hooks/useTrackerQuery";
-import { trackerKeys } from "@/hooks/queries/trackerQueries";
-import EntryPagination from "../EntryPagination";
+import { useTrackerEntries } from "@/hooks/useTrackerEntries";
+import TrackerEntryList from "../TrackerEntryList";
 import EditEntryModal from "../EditEntryModal";
 
 interface CounterTrackerProps {
@@ -23,12 +22,9 @@ interface CounterTrackerProps {
 export default function CounterTracker({ tracker, onUpdate }: CounterTrackerProps) {
   const queryClient = useQueryClient();
 
-  const [currentPage, setCurrentPage] = useState(1);
-  const [currentLimit, setCurrentLimit] = useState(10);
   const [changeAmount, setChangeAmount] = useState(1);
 
   const trackerQuery = useTrackerQuery(tracker.id);
-  const entriesQuery = useEntriesQuery(tracker.id, currentPage, currentLimit);
   const counterMutation = useCounterMutation(tracker.id);
   const periodStatsQuery = usePeriodStats(tracker.id);
   const { key: periodKey, label: periodLabel } = resolvePeriod(
@@ -41,59 +37,17 @@ export default function CounterTracker({ tracker, onUpdate }: CounterTrackerProp
       ? (periodStatsQuery.data[periodKey] ?? 0)
       : (trackerQuery.data?.statistics?.totalValue ?? tracker.statistics?.totalValue ?? 0);
 
-  const entries = (entriesQuery.data?.entries ?? []) as TrackerEntry[];
-  const totalEntries = entriesQuery.data?.total ?? 0;
-  const isLoadingEntries = entriesQuery.isLoading;
+  const {
+    entries,
+    totalEntries,
+    isLoadingEntries,
+    currentPage,
+    setCurrentPage,
+    currentLimit,
+    setCurrentLimit,
+    handleEntryUpdated,
+  } = useTrackerEntries(tracker.id);
   const isPending = counterMutation.isPending;
-
-  const handleEntryUpdated = () => {
-    void queryClient.invalidateQueries({ queryKey: trackerKeys.detail(tracker.id) });
-    void queryClient.invalidateQueries({ queryKey: ["entries", tracker.id] });
-    void queryClient.invalidateQueries({ queryKey: trackerKeys.stats(tracker.id, "period") });
-  };
-
-  const formatDate = (date: Date) => {
-    return new Intl.DateTimeFormat("en-US", {
-      month: "short",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-    }).format(new Date(date));
-  };
-
-  const handleIncrement = () => {
-    counterMutation.mutate(
-      { value: changeAmount },
-      {
-        onSuccess: () => {
-          if (onUpdate) onUpdate();
-        },
-      }
-    );
-  };
-
-  const handleDecrement = () => {
-    counterMutation.mutate(
-      { value: -changeAmount },
-      {
-        onSuccess: () => {
-          if (onUpdate) onUpdate();
-        },
-      }
-    );
-  };
-
-  const handleReset = () => {
-    if (currentValue === 0) return;
-    counterMutation.mutate(
-      { value: -currentValue, note: "Counter reset" },
-      {
-        onSuccess: () => {
-          if (onUpdate) onUpdate();
-        },
-      }
-    );
-  };
 
   return (
     <div className="bg-background border-border rounded-lg border p-6 shadow-sm">
@@ -130,7 +84,16 @@ export default function CounterTracker({ tracker, onUpdate }: CounterTrackerProp
         {/* Control buttons */}
         <div className="flex justify-center space-x-3">
           <Button
-            onClick={handleDecrement}
+            onClick={() =>
+              counterMutation.mutate(
+                { value: -changeAmount },
+                {
+                  onSuccess: () => {
+                    if (onUpdate) onUpdate();
+                  },
+                }
+              )
+            }
             disabled={isPending}
             variant="outline"
             className="h-16 w-16 rounded-full text-xl"
@@ -139,7 +102,16 @@ export default function CounterTracker({ tracker, onUpdate }: CounterTrackerProp
           </Button>
 
           <Button
-            onClick={handleIncrement}
+            onClick={() =>
+              counterMutation.mutate(
+                { value: changeAmount },
+                {
+                  onSuccess: () => {
+                    if (onUpdate) onUpdate();
+                  },
+                }
+              )
+            }
             disabled={isPending}
             className="h-16 w-16 rounded-full text-xl"
             style={{ backgroundColor: tracker.color || undefined }}
@@ -151,7 +123,16 @@ export default function CounterTracker({ tracker, onUpdate }: CounterTrackerProp
         {/* Reset button */}
         <div className="mt-4 flex justify-center">
           <Button
-            onClick={handleReset}
+            onClick={() =>
+              counterMutation.mutate(
+                { value: -currentValue, note: "Counter reset" },
+                {
+                  onSuccess: () => {
+                    if (onUpdate) onUpdate();
+                  },
+                }
+              )
+            }
             disabled={isPending || currentValue === 0}
             variant="ghost"
             size="sm"
@@ -163,56 +144,47 @@ export default function CounterTracker({ tracker, onUpdate }: CounterTrackerProp
       </div>
 
       {/* History section */}
-      <div className="mt-8">
-        <h3 className="mb-3 text-sm font-medium">Recent Changes</h3>
-        {isLoadingEntries ? (
-          <div className="flex justify-center p-4">
-            <div className="border-primary h-6 w-6 animate-spin rounded-full border-t-2 border-b-2"></div>
-          </div>
-        ) : entries.length > 0 ? (
-          <>
-            <div className="space-y-2">
-              {entries.map((entry) => (
-                <div key={entry.id} className="border-border rounded-md border p-3 text-sm">
-                  <div className="flex items-center justify-between">
-                    <div className="font-medium">{formatDate(entry.date)}</div>
-                    <div className="flex items-center gap-1">
-                      <span
-                        className={`${(entry.value || 0) >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}
-                      >
-                        {(entry.value || 0) > 0 ? "+" : ""}
-                        {entry.value}
-                      </span>
-                      <EditEntryModal
-                        entry={entry}
-                        trackerType={TrackerType.COUNTER}
-                        onSuccess={handleEntryUpdated}
-                      />
-                    </div>
-                  </div>
-                  {entry.note && (
-                    <div className="text-foreground/60 mt-1 text-xs italic">{entry.note}</div>
-                  )}
-                </div>
-              ))}
+      <TrackerEntryList
+        entries={entries}
+        isLoading={isLoadingEntries}
+        totalEntries={totalEntries}
+        currentPage={currentPage}
+        currentLimit={currentLimit}
+        onPageChange={setCurrentPage}
+        onLimitChange={setCurrentLimit}
+        renderItem={(entry) => (
+          <div key={entry.id} className="border-border rounded-md border p-3 text-sm">
+            <div className="flex items-center justify-between">
+              <div className="font-medium">
+                {new Intl.DateTimeFormat("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  hour: "numeric",
+                  minute: "2-digit",
+                }).format(new Date(entry.date))}
+              </div>
+              <div className="flex items-center gap-1">
+                <span
+                  className={`${(entry.value || 0) >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}
+                >
+                  {(entry.value || 0) > 0 ? "+" : ""}
+                  {entry.value}
+                </span>
+                <EditEntryModal
+                  entry={entry}
+                  trackerType={TrackerType.COUNTER}
+                  onSuccess={handleEntryUpdated}
+                />
+              </div>
             </div>
-            <EntryPagination
-              currentPage={currentPage}
-              currentLimit={currentLimit}
-              totalEntries={totalEntries}
-              onPageChange={setCurrentPage}
-              onLimitChange={(limit) => {
-                setCurrentLimit(limit);
-                setCurrentPage(1);
-              }}
-            />
-          </>
-        ) : (
-          <div className="border-border rounded-md border border-dashed p-4 text-center">
-            <p className="text-foreground/60 text-sm">No recent changes to display</p>
+            {entry.note && (
+              <div className="text-foreground/60 mt-1 text-xs italic">{entry.note}</div>
+            )}
           </div>
         )}
-      </div>
+        emptyMessage="No recent changes to display"
+        sectionTitle="Recent Changes"
+      />
     </div>
   );
 }
