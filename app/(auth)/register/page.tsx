@@ -46,7 +46,8 @@ export default function RegisterPage() {
         router.push("/dashboard");
         router.refresh();
       }
-    } catch {
+    } catch (error) {
+      console.error("[auth:register] Operation failed:", error);
       setError("Registration failed. Please try again.");
     } finally {
       setIsLoading(false);

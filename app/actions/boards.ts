@@ -2,17 +2,10 @@
 
 import { z } from "zod";
 import prisma from "@/lib/db/prisma";
-import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
 import type { Board } from "@/types";
 
-async function requireUserId(): Promise<string> {
-  const session = await auth();
-  if (!session?.user?.id) {
-    throw new Error("Unauthorized");
-  }
-  return session.user.id;
-}
+import { requireUserId } from "@/lib/auth/server";
 
 export type BoardActionResponse<T = unknown> =
   | { success: true; data: T }
@@ -55,6 +48,7 @@ export async function createBoard(
     revalidatePath("/boards");
     return { success: true, data: { id: board.id } };
   } catch (error) {
+    console.error("[boards] Operation failed:", error);
     if (error instanceof z.ZodError) {
       return { success: false, error: error.issues.map((e) => e.message).join(", ") };
     }
@@ -84,13 +78,17 @@ export async function getBoards(): Promise<BoardActionResponse<Board[]>> {
       orderBy: { updatedAt: "desc" },
     });
 
-    return { success: true, data: boards as unknown as Board[] };
-  } catch {
+    return { success: true, data: boards as Board[] };
+  } catch (error) {
+    console.error("[boards] Operation failed:", error);
     return { success: false, error: "Failed to fetch boards" };
   }
 }
 
 export async function getBoard(boardId: string): Promise<BoardActionResponse<Board>> {
+  if (!boardId || boardId.trim() === "") {
+    return { success: false, error: "Board ID is required" };
+  }
   try {
     const userId = await requireUserId();
 
@@ -115,8 +113,9 @@ export async function getBoard(boardId: string): Promise<BoardActionResponse<Boa
       return { success: false, error: "Board not found" };
     }
 
-    return { success: true, data: board as unknown as Board };
-  } catch {
+    return { success: true, data: board as Board };
+  } catch (error) {
+    console.error("[boards] Operation failed:", error);
     return { success: false, error: "Failed to fetch board" };
   }
 }
@@ -146,6 +145,7 @@ export async function updateBoard(
     revalidatePath(`/boards/${boardId}`);
     return { success: true, data: { id: boardId } };
   } catch (error) {
+    console.error("[boards] Operation failed:", error);
     if (error instanceof z.ZodError) {
       return { success: false, error: error.issues.map((e) => e.message).join(", ") };
     }
@@ -154,6 +154,9 @@ export async function updateBoard(
 }
 
 export async function deleteBoard(boardId: string): Promise<BoardActionResponse<null>> {
+  if (!boardId || boardId.trim() === "") {
+    return { success: false, error: "Board ID is required" };
+  }
   try {
     const userId = await requireUserId();
 
@@ -169,7 +172,8 @@ export async function deleteBoard(boardId: string): Promise<BoardActionResponse<
 
     revalidatePath("/boards");
     return { success: true, data: null };
-  } catch {
+  } catch (error) {
+    console.error("[boards] Operation failed:", error);
     return { success: false, error: "Failed to delete board" };
   }
 }
@@ -184,6 +188,9 @@ export async function addColumn(
   boardId: string,
   data: z.infer<typeof ColumnSchema>
 ): Promise<BoardActionResponse<{ id: string }>> {
+  if (!boardId || boardId.trim() === "") {
+    return { success: false, error: "Board ID is required" };
+  }
   try {
     const userId = await requireUserId();
     const validated = ColumnSchema.parse(data);
@@ -205,6 +212,7 @@ export async function addColumn(
     revalidatePath(`/boards/${boardId}`);
     return { success: true, data: { id: column.id } };
   } catch (error) {
+    console.error("[boards] Operation failed:", error);
     if (error instanceof z.ZodError) {
       return { success: false, error: error.issues.map((e) => e.message).join(", ") };
     }
@@ -216,6 +224,9 @@ export async function updateColumn(
   columnId: string,
   data: z.infer<typeof ColumnSchema>
 ): Promise<BoardActionResponse<null>> {
+  if (!columnId || columnId.trim() === "") {
+    return { success: false, error: "Column ID is required" };
+  }
   try {
     const userId = await requireUserId();
     const validated = ColumnSchema.parse(data);
@@ -236,6 +247,7 @@ export async function updateColumn(
     revalidatePath(`/boards/${column.boardId}`);
     return { success: true, data: null };
   } catch (error) {
+    console.error("[boards] Operation failed:", error);
     if (error instanceof z.ZodError) {
       return { success: false, error: error.issues.map((e) => e.message).join(", ") };
     }
@@ -244,6 +256,9 @@ export async function updateColumn(
 }
 
 export async function deleteColumn(columnId: string): Promise<BoardActionResponse<null>> {
+  if (!columnId || columnId.trim() === "") {
+    return { success: false, error: "Column ID is required" };
+  }
   try {
     const userId = await requireUserId();
 
@@ -259,7 +274,8 @@ export async function deleteColumn(columnId: string): Promise<BoardActionRespons
 
     revalidatePath(`/boards/${column.boardId}`);
     return { success: true, data: null };
-  } catch {
+  } catch (error) {
+    console.error("[boards] Operation failed:", error);
     return { success: false, error: "Failed to delete column" };
   }
 }

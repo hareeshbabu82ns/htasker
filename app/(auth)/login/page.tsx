@@ -36,7 +36,8 @@ export default function LoginPage() {
         router.push("/dashboard");
         router.refresh();
       }
-    } catch {
+    } catch (error) {
+      console.error("[auth:login] Operation failed:", error);
       setError("Sign in failed. Please try again.");
     } finally {
       setIsLoading(false);

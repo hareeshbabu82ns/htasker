@@ -210,7 +210,7 @@ export default function TrackerForm({ initialData, trackerId, onSuccess }: Track
           className={`focus:ring-primary/50 focus:border-primary w-full rounded-md border px-3 py-2 shadow-sm ${
             errors.name
               ? "border-red-500 focus:border-red-500 focus:ring-red-500/50"
-              : "border-gray-300 dark:border-gray-700"
+              : "border-border"
           } bg-background`}
           placeholder="Enter tracker name"
           {...register("name")}
@@ -225,7 +225,7 @@ export default function TrackerForm({ initialData, trackerId, onSuccess }: Track
         <textarea
           id="description"
           rows={3}
-          className="focus:ring-primary/50 focus:border-primary bg-background w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm dark:border-gray-700"
+          className="focus:ring-primary/50 focus:border-primary bg-background border-border w-full rounded-md border px-3 py-2 shadow-sm"
           placeholder="Enter a description (optional)"
           {...register("description")}
         ></textarea>
@@ -240,7 +240,7 @@ export default function TrackerForm({ initialData, trackerId, onSuccess }: Track
         </label>
         <select
           id="type"
-          className={`focus:ring-primary/50 focus:border-primary w-full rounded-md border px-3 py-2 shadow-sm ${isEditing ? "cursor-not-allowed bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400" : "bg-background"} ${errors.type ? "border-red-500" : "border-gray-300 dark:border-gray-700"}`}
+          className={`focus:ring-primary/50 focus:border-primary w-full rounded-md border px-3 py-2 shadow-sm ${isEditing ? "bg-muted text-muted-foreground dark:bg-muted dark:text-muted-foreground cursor-not-allowed" : "bg-background"} ${errors.type ? "border-red-500" : "border-border"}`}
           {...register("type")}
           disabled={isEditing}
         >
@@ -265,7 +265,7 @@ export default function TrackerForm({ initialData, trackerId, onSuccess }: Track
           </label>
           <select
             id="status"
-            className={`focus:ring-primary/50 focus:border-primary bg-background w-full rounded-md border px-3 py-2 shadow-sm ${errors.status ? "border-red-500" : "border-gray-300 dark:border-gray-700"}`}
+            className={`focus:ring-primary/50 focus:border-primary bg-background w-full rounded-md border px-3 py-2 shadow-sm ${errors.status ? "border-red-500" : "border-border"}`}
             {...register("status")}
           >
             <option value={TrackerStatus.ACTIVE}>Active</option>
@@ -284,7 +284,7 @@ export default function TrackerForm({ initialData, trackerId, onSuccess }: Track
           <input
             type="text"
             id="tagInput"
-            className="focus:ring-primary/50 focus:border-primary bg-background flex-grow rounded-md border border-gray-300 px-3 py-2 shadow-sm dark:border-gray-700"
+            className="focus:ring-primary/50 focus:border-primary bg-background border-border flex-grow rounded-md border px-3 py-2 shadow-sm"
             placeholder="Add tags (press Enter)"
             value={tagInput}
             onChange={(e) => setTagInput(e.target.value)}
@@ -332,8 +332,8 @@ export default function TrackerForm({ initialData, trackerId, onSuccess }: Track
           <input
             type="text"
             id="colorText"
-            className={`focus:ring-primary/50 focus:border-primary bg-background flex-grow rounded-md border px-3 py-2 shadow-sm dark:border-gray-700 ${
-              errors.color ? "border-red-500" : "border-gray-300"
+            className={`focus:ring-primary/50 focus:border-primary bg-background flex-grow rounded-md border px-3 py-2 shadow-sm ${
+              errors.color ? "border-red-500" : "border-border"
             }`}
             placeholder="#3B82F6"
             {...register("color")}
@@ -346,7 +346,7 @@ export default function TrackerForm({ initialData, trackerId, onSuccess }: Track
       {/* Add icon selection logic here if needed */}
 
       {/* Form submission */}
-      <div className="mt-6 flex justify-end space-x-3 border-t border-gray-200 pt-4 dark:border-gray-700">
+      <div className="border-border mt-6 flex justify-end space-x-3 border-t pt-4">
         <Button
           type="button"
           variant="outline"

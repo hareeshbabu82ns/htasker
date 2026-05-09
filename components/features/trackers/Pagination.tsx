@@ -84,7 +84,7 @@ export default function Pagination({
           href={currentPage > 1 ? getPageUrl(currentPage - 1) : "#"}
           className={`rounded-md px-2 py-2 text-sm font-medium ${
             currentPage === 1
-              ? "cursor-not-allowed text-gray-400"
+              ? "text-muted-foreground/60 cursor-not-allowed"
               : "text-primary hover:bg-primary/5"
           }`}
           aria-disabled={currentPage === 1}
@@ -134,7 +134,7 @@ export default function Pagination({
           href={currentPage < totalPages ? getPageUrl(currentPage + 1) : "#"}
           className={`rounded-md px-2 py-2 text-sm font-medium ${
             currentPage === totalPages
-              ? "cursor-not-allowed text-gray-400"
+              ? "text-muted-foreground/60 cursor-not-allowed"
               : "text-primary hover:bg-primary/5"
           }`}
           aria-disabled={currentPage === totalPages}

@@ -144,7 +144,7 @@ export default function OccurrenceTracker({ tracker, onUpdate }: OccurrenceTrack
             value={selectedDate}
             onChange={(e) => setSelectedDate(e.target.value)}
             max={formattedToday}
-            className="focus:ring-primary/50 focus:border-primary bg-background w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm dark:border-gray-700"
+            className="focus:ring-primary/50 focus:border-primary bg-background border-border w-full rounded-md border px-3 py-2 shadow-sm"
           />
         </div>
 
@@ -158,7 +158,7 @@ export default function OccurrenceTracker({ tracker, onUpdate }: OccurrenceTrack
             rows={2}
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            className="focus:ring-primary/50 focus:border-primary bg-background w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm dark:border-gray-700"
+            className="focus:ring-primary/50 focus:border-primary bg-background border-border w-full rounded-md border px-3 py-2 shadow-sm"
             placeholder="Add a note about this occurrence..."
           />
         </div>
@@ -179,7 +179,7 @@ export default function OccurrenceTracker({ tracker, onUpdate }: OccurrenceTrack
       {/* Calendar placeholder */}
       <div className="mt-8">
         <h3 className="mb-3 text-sm font-medium">Occurrence Calendar</h3>
-        <div className="rounded-md border border-dashed border-gray-300 p-4 text-center dark:border-gray-700">
+        <div className="border-border rounded-md border border-dashed p-4 text-center">
           <p className="text-foreground/60 text-sm">Calendar visualization coming soon</p>
         </div>
       </div>
@@ -222,7 +222,7 @@ export default function OccurrenceTracker({ tracker, onUpdate }: OccurrenceTrack
             />
           </>
         ) : (
-          <div className="rounded-md border border-dashed border-gray-300 p-4 text-center dark:border-gray-700">
+          <div className="border-border rounded-md border border-dashed p-4 text-center">
             <p className="text-foreground/60 text-sm">No recent occurrences to display</p>
           </div>
         )}

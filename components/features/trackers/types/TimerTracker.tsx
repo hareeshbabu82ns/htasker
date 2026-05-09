@@ -288,7 +288,7 @@ export default function TimerTracker({ tracker, onUpdate }: TimerTrackerProps) {
             />
           </>
         ) : (
-          <div className="rounded-md border border-dashed border-gray-300 p-4 text-center dark:border-gray-700">
+          <div className="border-border rounded-md border border-dashed p-4 text-center">
             <p className="text-foreground/60 text-sm">No recent sessions to display</p>
           </div>
         )}

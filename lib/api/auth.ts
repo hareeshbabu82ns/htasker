@@ -51,16 +51,3 @@ export async function validateApiToken(request: Request): Promise<ApiAuthResult 
 export function unauthorizedResponse(): Response {
   return Response.json({ error: "Unauthorized" }, { status: 401 });
 }
-
-/** Wraps a route handler in a try/catch, returning 500 on unexpected errors */
-export function withErrorHandling(
-  handler: (request: Request, context: unknown) => Promise<Response>
-): (request: Request, context: unknown) => Promise<Response> {
-  return async (request, context) => {
-    try {
-      return await handler(request, context);
-    } catch {
-      return Response.json({ error: "Internal server error" }, { status: 500 });
-    }
-  };
-}

@@ -44,7 +44,8 @@ export async function GET(request: Request, { params }: RouteContext) {
     }
 
     return Response.json({ data: entry });
-  } catch {
+  } catch (error) {
+    console.error("[api:entries] Operation failed:", error);
     return Response.json({ error: "Internal server error" }, { status: 500 });
   }
 }
@@ -68,7 +69,8 @@ export async function PUT(request: Request, { params }: RouteContext) {
     let body: unknown;
     try {
       body = await request.json();
-    } catch {
+    } catch (error) {
+      console.error("[api:entries] Operation failed:", error);
       return Response.json({ error: "Invalid JSON body" }, { status: 400 });
     }
 
@@ -93,7 +95,8 @@ export async function PUT(request: Request, { params }: RouteContext) {
     });
 
     return Response.json({ data: updated });
-  } catch {
+  } catch (error) {
+    console.error("[api:entries] Operation failed:", error);
     return Response.json({ error: "Internal server error" }, { status: 500 });
   }
 }
@@ -117,7 +120,8 @@ export async function DELETE(request: Request, { params }: RouteContext) {
     await prisma.trackerEntry.delete({ where: { id: entryId } });
 
     return new Response(null, { status: 204 });
-  } catch {
+  } catch (error) {
+    console.error("[api:entries] Operation failed:", error);
     return Response.json({ error: "Internal server error" }, { status: 500 });
   }
 }

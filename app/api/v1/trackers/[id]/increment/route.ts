@@ -27,7 +27,8 @@ export async function POST(request: Request, { params }: RouteContext) {
     let body: unknown;
     try {
       body = await request.json();
-    } catch {
+    } catch (error) {
+      console.error("[api:increment] Operation failed:", error);
       return Response.json({ error: "Invalid JSON body" }, { status: 400 });
     }
 
@@ -90,7 +91,8 @@ export async function POST(request: Request, { params }: RouteContext) {
     }
 
     return Response.json({ data: result }, { status: 200 });
-  } catch {
+  } catch (error) {
+    console.error("[api:increment] Operation failed:", error);
     return Response.json({ error: "Internal server error" }, { status: 500 });
   }
 }

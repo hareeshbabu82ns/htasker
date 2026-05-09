@@ -121,7 +121,7 @@ export default function AmountTracker({ tracker, onUpdate }: AmountTrackerProps)
         <div className="grid grid-cols-4 gap-2">
           <div className="col-span-1">
             <select
-              className="focus:ring-primary/50 focus:border-primary bg-background w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm dark:border-gray-700"
+              className="focus:ring-primary/50 focus:border-primary bg-background border-border w-full rounded-md border px-3 py-2 shadow-sm"
               value={currency}
               onChange={(e) => setCurrency(e.target.value)}
             >
@@ -137,7 +137,7 @@ export default function AmountTracker({ tracker, onUpdate }: AmountTrackerProps)
             <input
               type="number"
               step="0.01"
-              className="focus:ring-primary/50 focus:border-primary bg-background w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm dark:border-gray-700"
+              className="focus:ring-primary/50 focus:border-primary bg-background border-border w-full rounded-md border px-3 py-2 shadow-sm"
               placeholder="Enter amount"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
@@ -150,7 +150,7 @@ export default function AmountTracker({ tracker, onUpdate }: AmountTrackerProps)
         <div>
           <input
             type="text"
-            className="focus:ring-primary/50 focus:border-primary bg-background w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm dark:border-gray-700"
+            className="focus:ring-primary/50 focus:border-primary bg-background border-border w-full rounded-md border px-3 py-2 shadow-sm"
             placeholder="Add a note (optional)"
             value={note}
             onChange={(e) => setNote(e.target.value)}
@@ -184,7 +184,7 @@ export default function AmountTracker({ tracker, onUpdate }: AmountTrackerProps)
               {displayedEntries.map((entry) => (
                 <div
                   key={entry.id}
-                  className="bg-background/50 flex items-center justify-between rounded-md border border-gray-200 p-3 dark:border-gray-800"
+                  className="bg-background/50 border-border dark:border-border flex items-center justify-between rounded-md border p-3"
                 >
                   <div>
                     <div className="font-medium">{formatCurrency(entry.value || 0)}</div>
@@ -221,7 +221,7 @@ export default function AmountTracker({ tracker, onUpdate }: AmountTrackerProps)
             />
           </>
         ) : (
-          <div className="rounded-md border border-dashed border-gray-300 p-4 text-center dark:border-gray-700">
+          <div className="border-border rounded-md border border-dashed p-4 text-center">
             <p className="text-foreground/60 text-sm">No recent entries to display</p>
           </div>
         )}

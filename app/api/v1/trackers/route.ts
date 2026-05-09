@@ -70,7 +70,8 @@ export async function GET(request: Request) {
       data: trackers,
       meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
     });
-  } catch {
+  } catch (error) {
+    console.error("[api:trackers] Operation failed:", error);
     return Response.json({ error: "Internal server error" }, { status: 500 });
   }
 }
@@ -87,7 +88,8 @@ export async function POST(request: Request) {
     let body: unknown;
     try {
       body = await request.json();
-    } catch {
+    } catch (error) {
+      console.error("[api:trackers] Operation failed:", error);
       return Response.json({ error: "Invalid JSON body" }, { status: 400 });
     }
 
@@ -108,7 +110,8 @@ export async function POST(request: Request) {
     });
 
     return Response.json({ data: tracker }, { status: 201 });
-  } catch {
+  } catch (error) {
+    console.error("[api:trackers] Operation failed:", error);
     return Response.json({ error: "Internal server error" }, { status: 500 });
   }
 }

@@ -127,7 +127,7 @@ export default function CustomTracker({ tracker, onUpdate }: CustomTrackerProps)
             id="custom-value"
             value={value}
             onChange={(e) => setValue(e.target.value)}
-            className="focus:ring-primary/50 focus:border-primary bg-background w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm dark:border-gray-700"
+            className="focus:ring-primary/50 focus:border-primary bg-background border-border w-full rounded-md border px-3 py-2 shadow-sm"
             placeholder="Enter a value for this entry..."
           />
         </div>
@@ -142,7 +142,7 @@ export default function CustomTracker({ tracker, onUpdate }: CustomTrackerProps)
             rows={3}
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            className="focus:ring-primary/50 focus:border-primary bg-background w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm dark:border-gray-700"
+            className="focus:ring-primary/50 focus:border-primary bg-background border-border w-full rounded-md border px-3 py-2 shadow-sm"
             placeholder="Add a note to describe this entry..."
           />
         </div>
@@ -159,7 +159,7 @@ export default function CustomTracker({ tracker, onUpdate }: CustomTrackerProps)
               value={tagInput}
               onChange={(e) => setTagInput(e.target.value)}
               onKeyPress={handleTagKeyPress}
-              className="focus:ring-primary/50 focus:border-primary bg-background flex-grow rounded-md border border-gray-300 px-3 py-2 shadow-sm dark:border-gray-700"
+              className="focus:ring-primary/50 focus:border-primary bg-background border-border flex-grow rounded-md border px-3 py-2 shadow-sm"
               placeholder="Add tags (press Enter)"
             />
             <Button
@@ -268,7 +268,7 @@ export default function CustomTracker({ tracker, onUpdate }: CustomTrackerProps)
             />
           </>
         ) : (
-          <div className="rounded-md border border-dashed border-gray-300 p-4 text-center dark:border-gray-700">
+          <div className="border-border rounded-md border border-dashed p-4 text-center">
             <p className="text-foreground/60 text-sm">No recent entries to display</p>
           </div>
         )}

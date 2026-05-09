@@ -1,0 +1,9 @@
+{
+  "features": {
+    "ghcr.io/mpriscella/features/sops:1": {
+      "version": "1.0.2",
+      "resolved": "ghcr.io/mpriscella/features/sops@sha256:218e7403fc400dface96dd1cf391caa9482dbef2ea0e177405f30ef3de6d509c",
+      "integrity": "sha256:218e7403fc400dface96dd1cf391caa9482dbef2ea0e177405f30ef3de6d509c"
+    }
+  }
+}

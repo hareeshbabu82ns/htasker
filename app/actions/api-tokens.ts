@@ -34,13 +34,7 @@ const GenerateTokenSchema = z.object({
 
 export type GenerateTokenInput = z.infer<typeof GenerateTokenSchema>;
 
-async function requireUserId(): Promise<string> {
-  const session = await auth();
-  if (!session?.user?.id) {
-    throw new Error("Unauthorized");
-  }
-  return session.user.id;
-}
+import { requireUserId } from "@/lib/auth/server";
 
 /**
  * Generate a new API token for the authenticated user.

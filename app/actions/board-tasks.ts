@@ -2,17 +2,10 @@
 
 import { z } from "zod";
 import prisma from "@/lib/db/prisma";
-import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
 import type { BoardTask } from "@/types";
 
-async function requireUserId(): Promise<string> {
-  const session = await auth();
-  if (!session?.user?.id) {
-    throw new Error("Unauthorized");
-  }
-  return session.user.id;
-}
+import { requireUserId } from "@/lib/auth/server";
 
 export type TaskActionResponse<T = unknown> =
   | { success: true; data: T }
@@ -87,8 +80,9 @@ export async function createTask(
     });
 
     revalidatePath(`/boards/${boardId}`);
-    return { success: true, data: task as unknown as BoardTask };
+    return { success: true, data: task as BoardTask };
   } catch (error) {
+    console.error("[board-tasks] Operation failed:", error);
     if (error instanceof z.ZodError) {
       return { success: false, error: error.issues.map((e) => e.message).join(", ") };
     }
@@ -128,8 +122,9 @@ export async function updateTask(
     });
 
     revalidatePath(`/boards/${existing.boardId}`);
-    return { success: true, data: task as unknown as BoardTask };
+    return { success: true, data: task as BoardTask };
   } catch (error) {
+    console.error("[board-tasks] Operation failed:", error);
     if (error instanceof z.ZodError) {
       return { success: false, error: error.issues.map((e) => e.message).join(", ") };
     }
@@ -138,6 +133,9 @@ export async function updateTask(
 }
 
 export async function deleteTask(taskId: string): Promise<TaskActionResponse<null>> {
+  if (!taskId || taskId.trim() === "") {
+    return { success: false, error: "Task ID is required" };
+  }
   try {
     const userId = await requireUserId();
 
@@ -153,7 +151,8 @@ export async function deleteTask(taskId: string): Promise<TaskActionResponse<nul
 
     revalidatePath(`/boards/${task.boardId}`);
     return { success: true, data: null };
-  } catch {
+  } catch (error) {
+    console.error("[board-tasks] Operation failed:", error);
     return { success: false, error: "Failed to delete task" };
   }
 }
@@ -163,6 +162,12 @@ export async function moveTask(
   targetColumnId: string,
   newOrder: number
 ): Promise<TaskActionResponse<null>> {
+  if (!taskId || taskId.trim() === "") {
+    return { success: false, error: "Task ID is required" };
+  }
+  if (!targetColumnId || targetColumnId.trim() === "") {
+    return { success: false, error: "Target column ID is required" };
+  }
   try {
     const userId = await requireUserId();
 
@@ -236,7 +241,8 @@ export async function moveTask(
 
     revalidatePath(`/boards/${boardId}`);
     return { success: true, data: null };
-  } catch {
+  } catch (error) {
+    console.error("[board-tasks] Operation failed:", error);
     return { success: false, error: "Failed to move task" };
   }
 }

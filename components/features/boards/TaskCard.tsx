@@ -38,6 +38,7 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
     <div
       ref={setNodeRef}
       style={style}
+      aria-label={`Task: ${task.title}`}
       className={cn(
         "group bg-card flex flex-col gap-2 rounded-xl border p-3 shadow-sm transition-all hover:border-indigo-500/30 hover:shadow-md",
         isDragging ? "scale-105 border-indigo-500/50 opacity-50 shadow-xl" : "border-border/50",

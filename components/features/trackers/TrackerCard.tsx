@@ -562,7 +562,7 @@ export default function TrackerCard({
                     </span>
                   ))}
                 {tracker.status === TrackerStatus.ARCHIVED && (
-                  <span className="rounded-full bg-gray-200 px-2 py-0.5 text-xs text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+                  <span className="bg-muted text-muted-foreground dark:bg-muted dark:text-muted-foreground rounded-full px-2 py-0.5 text-xs">
                     Archived
                   </span>
                 )}

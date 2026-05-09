@@ -17,7 +17,7 @@ export default async function EditTrackerPage({ params }: { params: Promise<{ id
     return notFound();
   }
 
-  const tracker = response.data as Tracker;
+  const tracker = response.data;
 
   // Prepare form values from the tracker data
   // Ensure initialData matches the expected type for the form, including status

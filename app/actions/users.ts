@@ -11,6 +11,9 @@ type UserActionResponse<T = unknown> =
 type UserSummary = Pick<User, "id" | "name" | "email" | "image">;
 
 export async function searchUsers(query: string): Promise<UserActionResponse<UserSummary[]>> {
+  if (!query || query.trim() === "") {
+    return { success: false, error: "Search query is required" };
+  }
   try {
     const session = await auth();
     if (!session?.user?.id) {
@@ -29,7 +32,8 @@ export async function searchUsers(query: string): Promise<UserActionResponse<Use
     });
 
     return { success: true, data: users };
-  } catch {
+  } catch (error) {
+    console.error("[users] Operation failed:", error);
     return { success: false, error: "Failed to search users" };
   }
 }

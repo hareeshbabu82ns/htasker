@@ -102,9 +102,10 @@ export default function TrackerFilters({
       <div className="flex flex-col gap-4 sm:flex-row">
         <div className="relative flex-grow">
           <input
+            id="tracker-search"
             type="text"
             placeholder="Search trackers..."
-            className="focus:ring-primary/50 focus:border-primary bg-background w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm dark:border-gray-700"
+            className="focus:ring-primary/50 focus:border-primary bg-background border-border w-full rounded-md border px-3 py-2 shadow-sm"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -112,7 +113,7 @@ export default function TrackerFilters({
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
           {/* Status filter */}
           <select
-            className="focus:ring-primary/50 focus:border-primary bg-background rounded-md border border-gray-300 px-3 py-2 shadow-sm dark:border-gray-700"
+            className="focus:ring-primary/50 focus:border-primary bg-background border-border rounded-md border px-3 py-2 shadow-sm"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
           >
@@ -124,7 +125,7 @@ export default function TrackerFilters({
 
           {/* Type filter */}
           <select
-            className="focus:ring-primary/50 focus:border-primary bg-background rounded-md border border-gray-300 px-3 py-2 shadow-sm dark:border-gray-700"
+            className="focus:ring-primary/50 focus:border-primary bg-background border-border rounded-md border px-3 py-2 shadow-sm"
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
           >
@@ -138,7 +139,7 @@ export default function TrackerFilters({
 
           {/* Sort order */}
           <select
-            className="focus:ring-primary/50 focus:border-primary bg-background rounded-md border border-gray-300 px-3 py-2 shadow-sm dark:border-gray-700"
+            className="focus:ring-primary/50 focus:border-primary bg-background border-border rounded-md border px-3 py-2 shadow-sm"
             value={sortOrder}
             onChange={(e) => setSortOrder(e.target.value)}
           >

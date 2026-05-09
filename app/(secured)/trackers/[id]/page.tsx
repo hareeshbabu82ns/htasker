@@ -20,7 +20,7 @@ export default async function TrackerDetailPage({ params }: { params: Promise<{ 
     return notFound();
   }
 
-  const tracker = response.data as Tracker;
+  const tracker = response.data;
 
   return (
     <div className="space-y-6">

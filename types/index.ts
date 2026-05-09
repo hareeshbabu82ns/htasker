@@ -73,12 +73,6 @@ export interface TrackerEntry {
   createdAt: Date;
 }
 
-// Discriminated union for tracker state management
-export type TrackerState =
-  | { status: "loading" }
-  | { status: "error"; error: Error }
-  | { status: "success"; data: Tracker };
-
 // Type guard for TrackerType
 export function isTrackerType(value: unknown): value is TrackerType {
   return TRACKER_TYPE_VALUES.includes(value as TrackerType);
@@ -99,26 +93,6 @@ export type TrackerFormValues = {
   color?: string;
   icon?: string;
 };
-
-export type TrackerEntryFormValues = {
-  startTime?: Date;
-  endTime?: Date;
-  value?: number;
-  note?: string;
-  tags: string[];
-};
-
-// API Response types
-export type ApiResponse<T> = { success: true; data: T } | { success: false; error: string };
-
-export type ApiError =
-  | { code: "UNAUTHORIZED"; message: string }
-  | {
-      code: "VALIDATION_ERROR";
-      message: string;
-      fields: Record<string, string>;
-    }
-  | { code: "SERVER_ERROR"; message: string };
 
 // Board (Kanban) types
 export interface Board {
@@ -154,17 +128,3 @@ export interface BoardTask {
   createdAt: Date;
   updatedAt: Date;
 }
-
-export type BoardFormValues = {
-  name: string;
-  description?: string;
-};
-
-export type BoardTaskFormValues = {
-  title: string;
-  description?: string;
-  startDate?: Date | null;
-  dueDate?: Date | null;
-  priority?: string | null;
-  assigneeId?: string | null;
-};
